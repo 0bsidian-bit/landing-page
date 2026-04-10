@@ -52,7 +52,7 @@ if (typeof colorSchemeQuery.addEventListener === 'function') {
 }
 
 const output = document.getElementById('output');
-const input = document.getElementById('input');
+const input = document.getElementById('cmd-input');
 const body = document.getElementById('body');
 const terminal = document.getElementById('terminal');
 const caret = document.getElementById('caret');
@@ -73,18 +73,16 @@ const commands = {
 type any command and press enter`,
 
   about: `lokesh tewari. mbbs, junior resident.
-rotating through medicine and the blood bank —
+rotating through medicine —
 learning how the body fails, and how to catch it.
 
-off-hours: usmle step 1 prep, a proxmox homelab,
+off-hours: a proxmox homelab,
 and an ongoing interest in where medicine, ai,
 and security quietly overlap.
 
-based in haldwani, india.`,
+based in india.`,
 
-  now: `· studying for usmle step 1 · aug 2026
-· first aid 2026 + uworld, first pass
-· hardening a homelab, one service at a time
+  now: `· hardening a homelab, one service at a time
 · reading: the emperor of all maladies`,
 
   stack: `proxmox ve on a single node. lxc for everything.

@@ -192,7 +192,7 @@ body::after {
 :root[data-theme="dark"] .icon-sun { display: block; }
 :root[data-theme="dark"] .icon-moon { display: none; }
 
-.login {
+.portal-link {
   color: var(--fg-dim);
   text-decoration: none;
   display: inline-flex;
@@ -208,18 +208,23 @@ body::after {
   height: 36px;
 }
 
-.login:hover {
+.portal-link:hover {
   color: var(--bg);
   background: var(--fg);
   border-color: var(--fg);
 }
 
-.login .arrow {
+.portal-link .arrow {
   display: inline-block;
   transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.login:hover .arrow { transform: translate(2px, -2px); }
+.portal-link:hover .arrow { transform: translate(2px, -2px); }
+
+.icon-btn:focus-visible,
+.portal-link:focus-visible {
+  border-radius: 999px;
+}
 
 .hero {
   flex: 1;
@@ -443,7 +448,7 @@ body::after {
   .subtitle { margin-bottom: 44px; }
   .terminal-body { font-size: 12px; padding: 16px; }
   .terminal-header { padding: 12px 16px; }
-  .login { padding: 8px 12px; }
+  .portal-link { padding: 8px 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -456,6 +461,12 @@ body::after {
 }
 
 :focus { outline: none; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
 
 ::selection {
   background: var(--accent);
