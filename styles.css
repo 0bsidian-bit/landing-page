@@ -349,6 +349,7 @@ body::after {
 .line {
   white-space: pre-wrap;
   word-break: break-word;
+  text-align: justify;
   animation: lineIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
@@ -362,10 +363,11 @@ body::after {
   font-weight: 500;
 }
 
-.input-line { display: flex; align-items: center; }
+.input-line { display: flex; align-items: center; flex-wrap: wrap; }
 
 .input-line input {
-  flex: 1;
+  width: 1ch;
+  max-width: 100%;
   background: transparent;
   border: none;
   outline: none;
@@ -389,8 +391,9 @@ body::after {
   width: 8px;
   height: 15px;
   background: var(--accent);
-  margin-left: -8px;
+  margin-left: 2px;
   vertical-align: middle;
+  flex-shrink: 0;
   animation: blink 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 

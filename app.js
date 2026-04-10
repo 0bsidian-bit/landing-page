@@ -218,6 +218,12 @@ function autocomplete(partial) {
   return null;
 }
 
+function updateInputWidth() {
+  input.style.width = Math.max(1, input.value.length) + 'ch';
+}
+
+input.addEventListener('input', updateInputWidth);
+
 function bootSequence() {
   const bootText = '> welcome. type /help to begin';
   const div = document.createElement('div');
@@ -247,26 +253,33 @@ input.addEventListener('keydown', (e) => {
     }
     handleCommand(val);
     input.value = '';
+    updateInputWidth();
     scrollDown();
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     if (history.length && historyIndex < history.length - 1) {
       historyIndex += 1;
       input.value = history[historyIndex];
+      updateInputWidth();
     }
   } else if (e.key === 'ArrowDown') {
     e.preventDefault();
     if (historyIndex > 0) {
       historyIndex -= 1;
       input.value = history[historyIndex];
+      updateInputWidth();
     } else {
       historyIndex = -1;
       input.value = '';
+      updateInputWidth();
     }
   } else if (e.key === 'Tab') {
     e.preventDefault();
     const completed = autocomplete(input.value.trim());
-    if (completed) input.value = completed;
+    if (completed) {
+      input.value = completed;
+      updateInputWidth();
+    }
   } else if (e.key === 'l' && e.ctrlKey) {
     e.preventDefault();
     clearTerminal();
