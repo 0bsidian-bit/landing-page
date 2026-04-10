@@ -1,6 +1,7 @@
 const root = document.documentElement;
 const themeToggle = document.getElementById('themeToggle');
 const STORAGE_KEY = 'lt-theme';
+const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
 function getInitialTheme() {
   try {
@@ -9,7 +10,7 @@ function getInitialTheme() {
   } catch (e) {
     // no-op
   }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return colorSchemeQuery.matches ? 'dark' : 'light';
 }
 
 function applyTheme(theme) {
@@ -35,14 +36,20 @@ if (themeToggle) {
   });
 }
 
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+function handleSystemThemeChange(e) {
   try {
     if (localStorage.getItem(STORAGE_KEY)) return;
   } catch (err) {
     // no-op
   }
   applyTheme(e.matches ? 'dark' : 'light');
-});
+}
+
+if (typeof colorSchemeQuery.addEventListener === 'function') {
+  colorSchemeQuery.addEventListener('change', handleSystemThemeChange);
+} else if (typeof colorSchemeQuery.addListener === 'function') {
+  colorSchemeQuery.addListener(handleSystemThemeChange);
+}
 
 const output = document.getElementById('output');
 const input = document.getElementById('input');
@@ -161,7 +168,11 @@ function scrollDown() {
 }
 
 function clearTerminal() {
-  output.replaceChildren();
+  if (typeof output.replaceChildren === 'function') {
+    output.replaceChildren();
+  } else {
+    output.textContent = '';
+  }
 }
 
 function pauseCaret() {
