@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dr. Lokesh Tewari — Notes from a working physician</title>
+<meta name="description" content="Notes from a working physician. MBBS, junior resident, homelab tinkerer.">
+<link rel="canonical" href="https://lokeshtewari.uk">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lokeshtewari.uk">
+<meta property="og:title" content="Dr. Lokesh Tewari — Notes from a working physician">
+<meta property="og:description" content="Notes from a working physician. MBBS, junior resident, homelab tinkerer.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Dr. Lokesh Tewari — Notes from a working physician">
+<meta name="twitter:description" content="Notes from a working physician. MBBS, junior resident, homelab tinkerer.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+<meta name="author" content="Dr. Lokesh Tewari">
+<meta name="theme-color" content="#1a1a1e">
+<link rel="stylesheet" href="/styles.css?v=3">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script src="/app.js" defer></script>
+</head>
+<body>
+<div class="page">
+    <div class="topbar">
+      <div class="monogram">
+        <span class="monogram-mark">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"/>
+          </svg>
+        </span>
+        <span class="monogram-name" id="monogramName">Dr. Lokesh Tewari</span>
+      </div>
+      <div class="topbar-right"></div>
+    </div>
+
+    <div class="hero">
+      <div class="name-wrap">
+        <div class="claude-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 1 L13.8 10.2 L23 12 L13.8 13.8 L12 23 L10.2 13.8 L1 12 L10.2 10.2 Z"/>
+          </svg>
+        </div>
+        <h1 class="name">0bsidian AI</h1>
+        <button class="chat-scroll-btn" id="chatScrollBtn" title="Jump to chat">chat ↓</button>
+      </div>
+      <p class="subtitle" id="hero-subtitle"></p>
+
+      <div class="dashboard-layout">
+        <div class="productivity-hub" id="prodHub">
+          <div class="hub-controls">
+            <button class="hub-fullscreen-btn" id="hubFullscreenBtn" title="Toggle Fullscreen">[⛶] fullscreen</button>
+          </div>
+
+          <!-- Todo List Inject -->
+          <div class="todo-card" id="todoCard">
+            <div class="todo-header">tasks</div>
+            <div class="todo-input-wrap">
+              <input type="color" id="todoColor" value="#e07878" title="Subject Color">
+              <input type="text" id="todoInput" placeholder="add subject..." autocomplete="off">
+              <button id="todoAdd">+</button>
+            </div>
+            <div class="todo-list-scroll" id="todoList"></div>
+          </div>
+
+          <!-- Pomodoro Card Inject -->
+          <div class="pomodoro-card" id="pomodoroCard">
+            <div class="pomo-header-flex">
+              <div class="pomo-tabs">
+                <button class="pomo-tab active" data-mode="pomodoro">pomodoro</button>
+                <button class="pomo-tab" data-mode="shortBreak">short break</button>
+                <button class="pomo-tab" data-mode="longBreak">long break</button>
+              </div>
+              <button class="pomo-settings-btn" id="pomoSettingsBtn">⚙</button>
+            </div>
+            
+            <div class="pomo-settings-menu" id="pomoSettingsMenu">
+              <div class="setting-row">
+                <span>ticking sound</span>
+                <input type="checkbox" id="settingTick">
+              </div>
+              <div class="setting-row">
+                <span>break bell</span>
+                <input type="checkbox" id="settingBell" checked>
+              </div>
+            </div>
+
+            <div class="pomo-circle-wrap">
+              <svg class="pomo-svg" viewBox="0 0 120 120" style="overflow:visible">
+                <circle class="pomo-bg" cx="60" cy="60" r="54"></circle>
+                <circle class="pomo-progress" cx="60" cy="60" r="54" id="pomoProgress" stroke-dasharray="339.292" stroke-dashoffset="0"></circle>
+                
+                <g id="pomoTip" class="pomo-tip-logo">
+                  <path d="M0 -8 L1.6 -1.6 L8 0 L1.6 1.6 L0 8 L-1.6 1.6 L-8 0 L-1.6 -1.6 Z" fill="#262630" stroke="var(--accent)" stroke-width="1.2"/>
+                </g>
+              </svg>
+              <div class="pomo-time" id="pomoTime">25:00</div>
+            </div>
+            <div class="pomo-controls">
+              <button class="pomo-btn" id="pomoToggle">▶</button>
+              <button class="pomo-btn pomo-reset" id="pomoReset">↻</button>
+            </div>
+            
+            <div class="pomo-footer">
+              <div class="pomo-cycles-wrap" id="pomoCyclesWrap">
+                <span class="pomo-cycle-label">cycle: <strong id="pomoCycle">1</strong></span>
+                <svg class="pomo-tomato cycle-1" viewBox="0 0 24 24"><path d="M12 2v4M10 4s2-2 4 0"/><circle cx="12" cy="14" r="8"/></svg>
+                <svg class="pomo-tomato cycle-2" viewBox="0 0 24 24"><path d="M12 2v4M10 4s2-2 4 0"/><circle cx="12" cy="14" r="8"/></svg>
+                <svg class="pomo-tomato cycle-3" viewBox="0 0 24 24"><path d="M12 2v4M10 4s2-2 4 0"/><circle cx="12" cy="14" r="8"/></svg>
+                <svg class="pomo-tomato cycle-4" viewBox="0 0 24 24"><path d="M12 2v4M10 4s2-2 4 0"/><circle cx="12" cy="14" r="8"/></svg>
+              </div>
+              <div class="studying-now" id="studyingNow">
+                <span class="studying-dot"></span>
+                <span id="studyingCount">—</span> studying now
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-divider">
+          <span class="divider-label">terminal</span>
+        </div>
+
+        <div class="terminal" id="terminal">
+          <div class="terminal-header">
+            <div>
+              <span class="host" id="term-host">0bsidian-bit</span>
+              <span class="badge" id="term-badge">~ · zsh</span>
+            </div>
+            <select id="modelPicker" class="model-picker">
+              <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast" selected>llama 3.3 70b</option>
+              <option value="@cf/meta/llama-4-scout-17b-16e-instruct">llama 4 scout</option>
+              <option value="@cf/google/gemma-4-26b-a4b-it">gemma 4 26b</option>
+              <option value="@cf/qwen/qwen3-30b-a3b-fp8">qwen3 30b</option>
+            </select>
+            <button class="terminal-fullscreen-btn" id="termFullscreenBtn" title="Fullscreen">⛶</button>
+          </div>
+          <div class="terminal-body" id="body">
+            <div id="output"></div>
+            <div class="turnstile-wrap" id="turnstileWrap">
+              <div id="turnstileWidget"></div>
+            </div>
+            <div class="input-line">
+              <span class="prompt" id="term-prompt">&gt;</span>
+              <div id="cmd-input" class="cmd-input" contenteditable="true" spellcheck="false" autocapitalize="none" autocorrect="off" enterkeyhint="go" role="textbox" aria-label="Terminal command input" aria-multiline="false" data-gramm="false"></div>
+              <span class="caret" id="caret"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tailscale-overlay" id="tailscaleOverlay" aria-hidden="true" aria-modal="true" role="dialog">
+      <div class="contact-panel">
+        <p class="contact-title">private portal</p>
+        <p style="font-family: var(--font-mono); font-size: 13px; color: var(--term-fg); margin-bottom: 24px; line-height: 1.6;">
+          Are you connected to Tailscale?<br>
+          This is a private server route.
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="contact-submit" id="tsCancel">cancel</button>
+          <button class="contact-submit" id="tsConfirm" style="color: var(--accent); border-color: var(--accent);">proceed →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-overlay" id="confirmOverlay">
+      <div class="confirm-panel">
+        <p class="confirm-msg" id="confirmMsg"></p>
+        <div class="confirm-actions">
+          <button class="confirm-btn confirm-cancel" id="confirmCancel">cancel</button>
+          <button class="confirm-btn confirm-yes" id="confirmYes">yes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Dr. Lokesh Tewari <span>·</span> india <span>·</span> <span id="footerYear"></span>
+    </div>
+  </div>
+
+  <div class="study-companion" id="studyCompanion">
+    <div class="speech-bubble" id="companionSpeech"></div>
+    <div class="companion-art" id="companionArt"></div>
+  </div>
+</body>
+</html>
