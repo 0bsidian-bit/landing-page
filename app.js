@@ -6,9 +6,21 @@ const CONFIG = {
   aiHistoryKey: 'lt-ai-history',
   subtitleText: 'notes from a working physician',
   typingSpeedMs: 55,
+  typingDelayMs: 2500,
   botName: '0bsidian',
   contactEmail: 'tarball.lipid_7i@icloud.com',
   portalUrl: 'https://start.lokeshtewari.uk'
+};
+
+const ICONS = {
+  play: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`,
+  pause: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
+  reset: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  soundOn: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`,
+  soundOff: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`,
+  send: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
+  install: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`
 };
 
 function siteConfirm(message) {
@@ -120,196 +132,107 @@ class ChatClient {
   }
 }
 
-class TerminalUI {
+class ChatUI {
   constructor() {
-    this.elements = {
-      terminal: document.getElementById('terminal'),
-      output: document.getElementById('output'),
-      input: document.getElementById('cmd-input'),
-      body: document.getElementById('body'),
-      caret: document.getElementById('caret'),
-      host: document.getElementById('term-host'),
-      badge: document.getElementById('term-badge'),
-      prompt: document.getElementById('term-prompt')
-    };
-    this.history = [];
-    this.historyIndex = -1;
-    this.commands = this.getCommandRegistry();
-    this.commandList = [...Object.keys(this.commands).map(c => '/' + c), '/forget', '/clear'];
+    this.messagesEl = document.getElementById('chatMessages');
+    this.input = document.getElementById('chatInput');
+    this.sendBtn = document.getElementById('chatSendBtn');
+    this.menuBtn = document.getElementById('chatMenuBtn');
+    this.menuDropdown = document.getElementById('chatMenuDropdown');
+    this.typingIndicator = null;
+    this.isLocked = true; // locked until Turnstile verified
     this.initEvents();
+    // Set send icon
+    if (this.sendBtn) this.sendBtn.innerHTML = ICONS.send;
   }
 
-  getCommandRegistry() {
-    return {
-      help: `available commands\n\n` +
-            `/about       who this is\n` +
-            `/now         current focus\n` +
-            `/github      code & projects\n` +
-            `/model       current AI model\n` +
-            `/version     build info\n` +
-            `/privacy     privacy details\n` +
-            `/forget      clear ai memory\n` +
-            `/clear       clear the screen\n\n` +
-            `type any command and press enter.\nanything not starting with '/' is sent to 0bsidian AI.`,
-      about: `lokesh tewari. mbbs.\ni diagnose, present, and occasionally get it right on the first try.\n\noff-hours: a proxmox homelab.\nmedicine and metasploit, in no particular order.\n\nbased in india.`,
-      now: `· eating, sleeping, procrastinating.\n· currently: the emperor of all maladies.`,
-      github: `github.com/0bsidian-bit\n\nprojects, dotfiles, and occasional proofs of concept.\nopen to collaboration — send a message first.`,
-      whoami: '0bsidian-bit. a working physician. and you?',
-      sudo: 'permission denied. nice try.',
-      model: 'llama 3.3 70b fp8  ·  cloudflare workers ai',
-      privacy: `your browser only. tasks, timers, chat history → localStorage.\nno analytics, no trackers, no cookies beyond turnstile.\nkv entries are ephemeral: rate-limit (60s), studying heartbeat (90s), turnstile verify (30m).\nsource: github.com/0bsidian-bit`,
-      version: () => {
-        const now = new Date();
-        const month = now.toLocaleString('en-us', { month: 'long' }).toLowerCase();
-        return `lokeshtewari.uk  v1.1.0\nbuilt      ${month} ${now.getFullYear()}\nruntime    cloudflare workers`;
-      }
-    };
+  setAppInstance(app) {
+    this.app = app;
+    document.getElementById('chatForget')?.addEventListener('click', () => {
+      this.app.chatClient.clearMemory();
+      this.appendSystemMessage('memory cleared.');
+      this.menuDropdown?.classList.remove('open');
+    });
+    document.getElementById('chatClear')?.addEventListener('click', () => {
+      this.clearMessages();
+      this.menuDropdown?.classList.remove('open');
+    });
   }
 
   initEvents() {
-    if (!this.elements.input) return;
-
-    this.elements.input.addEventListener('paste', e => {
-      e.preventDefault();
-      const text = e.clipboardData?.getData('text/plain') || '';
-      document.execCommand('insertText', false, text);
+    this.sendBtn?.addEventListener('click', () => this.submitInput());
+    this.input?.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.submitInput(); }
     });
-
-    this.elements.input.addEventListener('keydown', e => this.handleKeydown(e));
-
-    this.elements.terminal?.addEventListener('click', e => {
-      if (e.target.tagName !== 'BUTTON') {
-        const sel = window.getSelection();
-        if (!sel.toString()) this.elements.input.focus();
+    this.menuBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.menuDropdown?.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!this.menuDropdown?.contains(e.target) && e.target !== this.menuBtn) {
+        this.menuDropdown?.classList.remove('open');
       }
     });
   }
 
-  setAppInstance(app) { this.app = app; }
-
-  handleKeydown(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const val = this.getInputValue().trim();
-      if (val) { this.history.unshift(val); this.historyIndex = -1; }
-      this.app.routeInput(val);
-      this.clearInput();
-      this.scrollDown();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (this.historyIndex < this.history.length - 1) this.setInputValue(this.history[++this.historyIndex]);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (this.historyIndex > 0) this.setInputValue(this.history[--this.historyIndex]);
-      else { this.historyIndex = -1; this.clearInput(); }
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      const completed = this.autocomplete(this.getInputValue().trim());
-      if (completed) this.setInputValue(completed);
-    } else if (e.ctrlKey && e.key === 'l') {
-      e.preventDefault();
-      this.clearTerminal();
-    }
+  submitInput() {
+    if (this.isLocked) return;
+    const val = this.input?.value.trim();
+    if (!val) return;
+    if (this.input) this.input.value = '';
+    this.app.handleAIQuery(val);
   }
 
-  autocomplete(partial) {
-    if (!partial.startsWith('/')) return null;
-    const matches = this.commandList.filter(c => c.startsWith(partial));
-    if (matches.length === 1) return matches[0];
-    if (matches.length > 1) { this.printLine(matches.join('   '), 'dim'); this.scrollDown(); }
-    return null;
-  }
-
-  getInputValue() { return this.elements.input.textContent || ''; }
-  setInputValue(text) {
-    this.elements.input.textContent = text;
-    const range = document.createRange();
-    const sel = window.getSelection();
-    range.selectNodeContents(this.elements.input);
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-  clearInput() { this.elements.input.textContent = ''; }
-  clearTerminal() {
-    if (this.elements.output.replaceChildren) this.elements.output.replaceChildren();
-    else this.elements.output.textContent = '';
-  }
-  scrollDown() { this.elements.body.scrollTop = this.elements.body.scrollHeight; }
-
-  printLine(text, cls = '', markdown = false) {
-    text.split('\n').forEach(line => {
-      const div = document.createElement('div');
-      div.className = 'line' + (cls ? ' ' + cls : '');
-      if (markdown && line) div.appendChild(DOMUtils.parseMarkdown(line));
-      else div.textContent = line || '\u00A0';
-      this.elements.output.appendChild(div);
-    });
-  }
-
-  printUserInput(cmd) {
-    const div = document.createElement('div');
-    div.className = 'line';
-    const ps = document.createElement('span');
-    ps.className = 'prompt';
-    ps.textContent = '>';
-    div.appendChild(ps);
-    div.appendChild(document.createTextNode(cmd));
-    this.elements.output.appendChild(div);
-  }
-
-  printBlank() {
-    const div = document.createElement('div');
-    div.className = 'line';
-    div.textContent = '\u00A0';
-    this.elements.output.appendChild(div);
-  }
-
-  printSeparator() {
-    const div = document.createElement('div');
-    div.className = 'line separator';
-    this.elements.output.appendChild(div);
-  }
-
-  lockInput() { this.elements.input.contentEditable = 'false'; }
-  unlockInput() { this.elements.input.contentEditable = 'true'; this.elements.input.focus(); }
-
-  createSpinner() {
-    const thinkDiv = document.createElement('div');
-    thinkDiv.className = 'line ai-thinking';
-    this.elements.output.appendChild(thinkDiv);
+  appendUserMessage(text) {
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg chat-msg--user';
+    msg.textContent = text;
+    this.messagesEl?.appendChild(msg);
     this.scrollDown();
-    const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    let fi = 0;
-    const interval = setInterval(() => { thinkDiv.textContent = frames[fi++ % frames.length] + ' thinking'; }, 80);
-    return { remove: () => { clearInterval(interval); thinkDiv.remove(); } };
   }
 
-  printUserAIMessage(query) {
-    const userDiv = document.createElement('div');
-    userDiv.className = 'line ai-user';
-    const ps = document.createElement('span');
-    ps.className = 'ai-who ai-who-user';
-    ps.textContent = 'you';
-    userDiv.appendChild(ps);
-    userDiv.appendChild(document.createTextNode(query));
-    this.elements.output.appendChild(userDiv);
+  appendAIMessage(text) {
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg chat-msg--ai';
+    msg.appendChild(DOMUtils.parseMarkdown(text));
+    this.messagesEl?.appendChild(msg);
+    this.scrollDown();
   }
 
-  printBotAIMessage(response) {
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'line ai-label';
-    const labelSpan = document.createElement('span');
-    labelSpan.className = 'ai-who ai-who-bot';
-    labelSpan.textContent = CONFIG.botName;
-    labelDiv.appendChild(labelSpan);
-    this.elements.output.appendChild(labelDiv);
-    this.printLine(response, 'ai-response', true);
+  appendSystemMessage(text) {
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg chat-msg--system';
+    msg.textContent = text;
+    this.messagesEl?.appendChild(msg);
+    this.scrollDown();
   }
 
-  pauseCaret() {
-    this.elements.caret.classList.add('paused');
-    setTimeout(() => this.elements.caret.classList.remove('paused'), 2000);
+  showTypingIndicator() {
+    const ind = document.createElement('div');
+    ind.className = 'chat-msg chat-msg--ai chat-typing';
+    ind.innerHTML = '<span></span><span></span><span></span>';
+    this.messagesEl?.appendChild(ind);
+    this.typingIndicator = ind;
+    this.scrollDown();
+    return { remove: () => ind.remove() };
+  }
+
+  scrollDown() {
+    if (this.messagesEl) this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+  }
+
+  lockInput() {
+    this.isLocked = true;
+    if (this.input) { this.input.disabled = true; this.input.placeholder = 'verify to chat…'; }
+  }
+
+  unlockInput() {
+    this.isLocked = false;
+    if (this.input) { this.input.disabled = false; this.input.placeholder = 'type to chat…'; this.input.focus(); }
+  }
+
+  clearMessages() {
+    if (this.messagesEl) this.messagesEl.replaceChildren();
   }
 }
 
@@ -321,15 +244,27 @@ class PomoAudio {
   }
   playTick() {
     if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.05);
-    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-    osc.connect(gain); gain.connect(this.ctx.destination);
-    osc.start(); osc.stop(this.ctx.currentTime + 0.05);
+    const t = this.ctx.currentTime;
+    // High transient click
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(1200, t);
+    osc1.frequency.exponentialRampToValueAtTime(400, t + 0.012);
+    gain1.gain.setValueAtTime(0.12, t);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.018);
+    osc1.connect(gain1); gain1.connect(this.ctx.destination);
+    osc1.start(t); osc1.stop(t + 0.018);
+    // Low thud body
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(180, t);
+    osc2.frequency.exponentialRampToValueAtTime(80, t + 0.04);
+    gain2.gain.setValueAtTime(0.06, t);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    osc2.connect(gain2); gain2.connect(this.ctx.destination);
+    osc2.start(t); osc2.stop(t + 0.04);
   }
   playBell() {
     if (!this.ctx) return;
@@ -350,21 +285,18 @@ const POMO_STATS_KEY = '0bsidian_pomo_stats';
 const POMO_NAMES_KEY = '0bsidian_pomo_names_v1';
 const POMO_SETTINGS_KEY = '0bsidian_pomo_settings_v1';
 const POMO_LOG_KEY = '0bsidian_pomo_log_v1';
-const POMO_CIRCUMFERENCE = 339.292;
+const POMO_CIRCUMFERENCE = 439.823;
+const POMO_SOUND_KEY = '0bsidian_sound_enabled';
+const POMO_TIMER_MODE_KEY = '0bsidian_timer_mode';
 const POMO_DEFAULT_SETTINGS = {
   workDuration: 25,
   shortBreakDuration: 5,
-  longBreakDuration: 15,
-  longBreakInterval: 4,
-  autoStartBreaks: true,
-  autoStartPomodoros: false,
   tickingSound: false,
   bell: true,
 };
 
 class PomodoroTimer {
   constructor() {
-    // Load settings first so modes are correct
     this.settings = { ...POMO_DEFAULT_SETTINGS };
     try {
       const saved = JSON.parse(localStorage.getItem(POMO_SETTINGS_KEY));
@@ -374,7 +306,6 @@ class PomodoroTimer {
     this.modes = {
       pomodoro: this.settings.workDuration * 60,
       shortBreak: this.settings.shortBreakDuration * 60,
-      longBreak: this.settings.longBreakDuration * 60,
     };
     this.currentMode = 'pomodoro';
     this.timeLeft = this.modes.pomodoro;
@@ -386,78 +317,110 @@ class PomodoroTimer {
     let stats = { cycles: 0 };
     try { stats = JSON.parse(localStorage.getItem(POMO_STATS_KEY)) || stats; } catch {}
     this.totalCycles = stats.cycles;
-    // position within current interval (0 = start of a new set)
-    this.setInCount = this.totalCycles % this.settings.longBreakInterval;
 
-    this.names = { pomodoro: 'focus', shortBreak: 'short', longBreak: 'long' };
+    this.names = { pomodoro: 'focus', shortBreak: 'rest' };
     try {
       const saved = JSON.parse(localStorage.getItem(POMO_NAMES_KEY));
       if (saved && typeof saved === 'object') this.names = { ...this.names, ...saved };
     } catch {}
 
+    // Sound master toggle
+    this.soundEnabled = true;
+    try { const s = localStorage.getItem(POMO_SOUND_KEY); if (s !== null) this.soundEnabled = s !== 'false'; } catch {}
+
+    // Timer mode: 'focus' (count-up) or 'pomodoro' (countdown)
+    this.timerMode = 'focus';
+    try { const m = localStorage.getItem(POMO_TIMER_MODE_KEY); if (m === 'pomodoro' || m === 'focus') this.timerMode = m; } catch {}
+
+    // Focus mode state
+    this.focusElapsed = 0;
+    this.breakElapsed = 0;
+    this.focusPhase = 'idle'; // 'idle' | 'working' | 'breaking'
+    this.focusTimerId = null;
+
     this.audio = new PomoAudio();
 
     this.elements = {
       tabs: document.querySelectorAll('.pomo-tab'),
+      subtabs: document.getElementById('pomoSubtabs'),
       time: document.getElementById('pomoTime'),
       progress: document.getElementById('pomoProgress'),
       nameDisplay: document.getElementById('pomoNameDisplay'),
-      nameInput: document.getElementById('pomoNameInput'),
       toggleBtn: document.getElementById('pomoToggle'),
       resetBtn: document.getElementById('pomoReset'),
+      soundBtn: document.getElementById('pomoSound'),
       cycleInfo: document.getElementById('pomoCycle'),
       cyclesWrap: document.getElementById('pomoCyclesWrap'),
       settingsBtn: document.getElementById('pomoSettingsBtn'),
       settingsMenu: document.getElementById('pomoSettingsMenu'),
       fullscreenBtn: document.getElementById('hubFullscreenBtn'),
       hub: document.getElementById('prodHub'),
-      dashboard: document.getElementById('dashboardLayout')
+      dashboard: document.getElementById('dashboardLayout'),
+      pomoCard: document.getElementById('pomodoroCard'),
+      focusDisplay: document.getElementById('pomoFocusDisplay'),
+      focusTimeDisplay: document.getElementById('focusTimeDisplay'),
+      focusPhaseLabel: document.getElementById('focusPhaseLabel'),
     };
 
     if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.totalCycles + 1;
-    this.renderCycleDots();
     this.applySettingsToUI();
-
     this.initEvents();
+    this.applyTimerModeUI();
     this.hydrateFromStorage();
     this.updateModeVisuals();
     this.updateDisplay();
     this.updateName();
+    this.updateSoundBtn();
+
+    // Set initial icon on toggle button
+    if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+    if (this.elements.resetBtn) this.elements.resetBtn.innerHTML = ICONS.reset;
+    if (this.elements.settingsBtn) this.elements.settingsBtn.innerHTML = ICONS.settings;
+
+    // Inline rename on timer name click
+    this.elements.nameDisplay?.addEventListener('click', () => this.startInlineRename());
   }
 
   applySettingsToUI() {
     const s = this.settings;
     const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
     setVal('settingWorkDur', s.workDuration);       setTxt('settingWorkDurVal', s.workDuration);
     setVal('settingShortBreak', s.shortBreakDuration); setTxt('settingShortBreakVal', s.shortBreakDuration);
-    setVal('settingLongBreak', s.longBreakDuration);   setTxt('settingLongBreakVal', s.longBreakDuration);
-    setTxt('settingLongIntervalDisplay', s.longBreakInterval);
-    setChk('settingAutoBreaks', s.autoStartBreaks);
-    setChk('settingAutoPomodoros', s.autoStartPomodoros);
-    setChk('settingTick', s.tickingSound);
-    setChk('settingBell', s.bell);
   }
 
   saveSettings() {
     try { localStorage.setItem(POMO_SETTINGS_KEY, JSON.stringify(this.settings)); } catch {}
   }
 
-  renderCycleDots() {
-    const wrap = this.elements.cyclesWrap;
-    if (!wrap) return;
-    wrap.querySelectorAll('.pomo-tomato').forEach(d => d.remove());
-    const interval = this.settings.longBreakInterval;
-    for (let i = 0; i < interval; i++) {
-      const dot = document.createElement('span');
-      dot.className = 'pomo-tomato' + (i < this.setInCount ? ' active' : '');
-      dot.title = `session ${i + 1} of ${interval}`;
-      wrap.appendChild(dot);
+  applyTimerModeUI() {
+    const card = this.elements.pomoCard;
+    if (!card) return;
+    if (this.timerMode === 'focus') {
+      card.classList.add('timer-mode--focus');
+      card.classList.remove('timer-mode--pomodoro');
+    } else {
+      card.classList.add('timer-mode--pomodoro');
+      card.classList.remove('timer-mode--focus');
     }
+    // Update mode switch buttons
+    document.querySelectorAll('.timer-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.timerMode === this.timerMode);
+    });
   }
 
   initEvents() {
+    // Timer mode switch (Focus | Pomodoro)
+    document.querySelectorAll('.timer-mode-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (this.isRunning || this.focusPhase !== 'idle') {
+          if (!(await siteConfirm('Switch timer mode? This will stop the current session.'))) return;
+        }
+        this.switchTimerMode(btn.dataset.timerMode);
+      });
+    });
+
+    // Pomodoro sub-tabs (focus/rest)
     this.elements.tabs.forEach(tab => {
       tab.addEventListener('click', async () => {
         if (this.isRunning) {
@@ -466,29 +429,39 @@ class PomodoroTimer {
         this.setMode(tab.dataset.mode);
       });
     });
+
     this.elements.toggleBtn?.addEventListener('click', () => this.toggle());
     this.elements.resetBtn?.addEventListener('click', async () => {
+      if (this.timerMode === 'focus') {
+        if (this.focusPhase !== 'idle') {
+          if (!(await siteConfirm('Stop and reset the timer?'))) return;
+        }
+        this.resetFocus();
+        return;
+      }
       if (this.isRunning || this.timeLeft < this.modes[this.currentMode]) {
         if (!(await siteConfirm('Reset the timer?'))) return;
       }
       this.reset();
     });
-    this.elements.settingsBtn?.addEventListener('click', () => this.elements.settingsMenu?.classList.toggle('open'));
 
-    // Close settings when clicking outside
+    this.elements.soundBtn?.addEventListener('click', () => {
+      this.soundEnabled = !this.soundEnabled;
+      try { localStorage.setItem(POMO_SOUND_KEY, String(this.soundEnabled)); } catch {}
+      this.updateSoundBtn();
+    });
+
+    this.elements.settingsBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.elements.settingsMenu?.classList.toggle('open');
+    });
+
     document.addEventListener('click', (e) => {
       if (this.elements.settingsMenu?.classList.contains('open') &&
           !this.elements.settingsMenu.contains(e.target) &&
           e.target !== this.elements.settingsBtn) {
         this.elements.settingsMenu.classList.remove('open');
       }
-    });
-
-    this.elements.nameInput?.addEventListener('input', (e) => {
-      const v = (e.target.value || '').trim().slice(0, 20);
-      this.names[this.currentMode] = v || this.defaultName(this.currentMode);
-      try { localStorage.setItem(POMO_NAMES_KEY, JSON.stringify(this.names)); } catch {}
-      this.updateName();
     });
 
     this.elements.fullscreenBtn?.addEventListener('click', () => this.toggleFullscreen());
@@ -518,32 +491,116 @@ class PomodoroTimer {
     };
     bindSlider('settingWorkDur',    'settingWorkDurVal',    'workDuration',       'pomodoro');
     bindSlider('settingShortBreak', 'settingShortBreakVal', 'shortBreakDuration', 'shortBreak');
-    bindSlider('settingLongBreak',  'settingLongBreakVal',  'longBreakDuration',  'longBreak');
-
-    // Long break interval +/−
-    const intervalDisplay = document.getElementById('settingLongIntervalDisplay');
-    const changeInterval = (delta) => {
-      const v = Math.max(1, Math.min(10, this.settings.longBreakInterval + delta));
-      this.settings.longBreakInterval = v;
-      if (intervalDisplay) intervalDisplay.textContent = v;
-      this.setInCount = Math.min(this.setInCount, v - 1);
-      this.saveSettings();
-      this.renderCycleDots();
-    };
-    document.getElementById('intervalDec')?.addEventListener('click', () => changeInterval(-1));
-    document.getElementById('intervalInc')?.addEventListener('click', () => changeInterval(1));
-
-    // Toggle switches
-    const bindToggle = (id, key) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener('change', () => { this.settings[key] = el.checked; this.saveSettings(); });
-    };
-    bindToggle('settingAutoBreaks',    'autoStartBreaks');
-    bindToggle('settingAutoPomodoros', 'autoStartPomodoros');
-    bindToggle('settingTick',          'tickingSound');
-    bindToggle('settingBell',          'bell');
   }
+
+  updateSoundBtn() {
+    if (!this.elements.soundBtn) return;
+    this.elements.soundBtn.innerHTML = this.soundEnabled ? ICONS.soundOn : ICONS.soundOff;
+    this.elements.soundBtn.title = this.soundEnabled ? 'Sound on' : 'Sound off';
+  }
+
+  switchTimerMode(mode) {
+    this.stopFocusTick();
+    this.pause();
+    this.focusPhase = 'idle';
+    this.focusElapsed = 0;
+    this.breakElapsed = 0;
+    this.timerMode = mode;
+    try { localStorage.setItem(POMO_TIMER_MODE_KEY, mode); } catch {}
+    this.applyTimerModeUI();
+    if (this.timerMode === 'focus') {
+      this.updateFocusDisplay();
+      if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+    } else {
+      this.updateDisplay();
+      this.updateName();
+    }
+  }
+
+  // ── Focus mode ──────────────────────────────────────────────────────────────
+
+  focusToggle() {
+    this.audio.init();
+    if (this.focusPhase === 'idle') {
+      this.focusPhase = 'working';
+      this.focusElapsed = 0;
+      this.startFocusTick();
+      if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.pause;
+      if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(true);
+    } else if (this.focusPhase === 'working') {
+      this.stopFocusTick();
+      SessionLog.push({
+        id: Date.now(), name: this.names.pomodoro || 'focus', type: 'focus',
+        completedAt: Date.now(), duration: Math.max(1, Math.round(this.focusElapsed / 60))
+      });
+      if (this.soundEnabled && this.settings.bell) this.audio.playBell();
+      this.focusPhase = 'breaking';
+      this.breakElapsed = 0;
+      this.startFocusTick();
+      if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+      if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(false);
+    } else if (this.focusPhase === 'breaking') {
+      this.stopFocusTick();
+      SessionLog.push({
+        id: Date.now(), name: 'break', type: 'break',
+        completedAt: Date.now(), duration: Math.max(1, Math.round(this.breakElapsed / 60))
+      });
+      this.focusPhase = 'working';
+      this.focusElapsed = 0;
+      this.startFocusTick();
+      if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.pause;
+      if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(true);
+    }
+  }
+
+  startFocusTick() {
+    clearInterval(this.focusTimerId);
+    this.focusTimerId = setInterval(() => {
+      if (this.focusPhase === 'working') {
+        this.focusElapsed++;
+        if (this.soundEnabled && this.settings.tickingSound) this.audio.playTick();
+      } else if (this.focusPhase === 'breaking') {
+        this.breakElapsed++;
+      }
+      this.updateFocusDisplay();
+    }, 1000);
+  }
+
+  stopFocusTick() {
+    clearInterval(this.focusTimerId);
+    this.focusTimerId = null;
+  }
+
+  resetFocus() {
+    this.stopFocusTick();
+    this.focusPhase = 'idle';
+    this.focusElapsed = 0;
+    this.breakElapsed = 0;
+    this.updateFocusDisplay();
+    if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+    document.title = this.baseTitle;
+    if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(false);
+  }
+
+  updateFocusDisplay() {
+    const formatHMS = (secs) => {
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    };
+    const elapsed = this.focusPhase === 'breaking' ? this.breakElapsed : this.focusElapsed;
+    const label = this.focusPhase === 'breaking' ? 'break' : (this.focusPhase === 'working' ? (this.names.pomodoro || 'focus') : (this.names.pomodoro || 'focus'));
+    if (this.elements.focusTimeDisplay) this.elements.focusTimeDisplay.textContent = formatHMS(elapsed);
+    if (this.elements.focusPhaseLabel) this.elements.focusPhaseLabel.textContent = label;
+    if (this.focusPhase !== 'idle') {
+      document.title = `(${formatHMS(elapsed)}) ${this.baseTitle}`;
+    } else {
+      document.title = this.baseTitle;
+    }
+  }
+
+  // ── Pomodoro mode ───────────────────────────────────────────────────────────
 
   toggleFullscreen() {
     const layout = this.elements.dashboard;
@@ -568,15 +625,38 @@ class PomodoroTimer {
   }
 
   defaultName(mode) {
-    return mode === 'pomodoro' ? 'focus' : mode === 'shortBreak' ? 'short' : 'long';
+    return mode === 'pomodoro' ? 'focus' : 'rest';
   }
 
   updateName() {
     const name = this.names[this.currentMode] || this.defaultName(this.currentMode);
     if (this.elements.nameDisplay) this.elements.nameDisplay.textContent = name;
-    if (this.elements.nameInput && this.elements.nameInput.value !== name) this.elements.nameInput.value = name;
   }
 
+  startInlineRename() {
+    const el = this.elements.nameDisplay;
+    if (!el) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = this.names[this.currentMode] || this.defaultName(this.currentMode);
+    input.className = 'pomo-inline-rename';
+    input.maxLength = 20;
+    el.replaceWith(input);
+    input.focus(); input.select();
+    const commit = () => {
+      const v = input.value.trim() || this.defaultName(this.currentMode);
+      this.names[this.currentMode] = v;
+      try { localStorage.setItem(POMO_NAMES_KEY, JSON.stringify(this.names)); } catch {}
+      input.replaceWith(el);
+      this.elements.nameDisplay = el;
+      this.updateName();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { input.blur(); }
+      if (e.key === 'Escape') { input.replaceWith(el); this.elements.nameDisplay = el; }
+    });
+  }
 
   setMode(mode, { autoStart = false, silent = false } = {}) {
     if (!this.modes[mode]) return;
@@ -598,10 +678,14 @@ class PomodoroTimer {
   updateModeVisuals() {
     if (!this.elements.progress) return;
     if (this.currentMode === 'pomodoro') this.elements.progress.style.stroke = '';
-    else this.elements.progress.style.stroke = '#5eead4';
+    else this.elements.progress.style.stroke = '#888888';
   }
 
   toggle() {
+    if (this.timerMode === 'focus') {
+      this.focusToggle();
+      return;
+    }
     this.audio.init();
     if (this.isRunning) {
       this.pause();
@@ -614,7 +698,7 @@ class PomodoroTimer {
     if (this.isRunning || this.timeLeft <= 0) return;
     this.isRunning = true;
     this.endsAt = Date.now() + this.timeLeft * 1000;
-    this.elements.toggleBtn.textContent = '⏸';
+    if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.pause;
     this.timerId = setInterval(() => this.tick(), 1000);
     this.saveState();
     if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(this.currentMode === 'pomodoro');
@@ -626,7 +710,7 @@ class PomodoroTimer {
     }
     this.isRunning = false;
     this.endsAt = null;
-    if (this.elements.toggleBtn) this.elements.toggleBtn.textContent = '▶';
+    if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
     clearInterval(this.timerId);
     document.title = this.baseTitle;
     this.saveState();
@@ -643,7 +727,7 @@ class PomodoroTimer {
   tick() {
     this.timeLeft = Math.max(0, Math.ceil((this.endsAt - Date.now()) / 1000));
     this.updateDisplay();
-    if (this.settings.tickingSound) this.audio.playTick();
+    if (this.soundEnabled && this.settings.tickingSound) this.audio.playTick();
 
     if (this.timeLeft <= 0) {
       this.onComplete();
@@ -654,31 +738,21 @@ class PomodoroTimer {
 
   onComplete() {
     this.pause();
-    if (this.settings.bell) this.audio.playBell();
+    if (this.soundEnabled && this.settings.bell) this.audio.playBell();
 
     if (this.currentMode === 'pomodoro') {
       this.totalCycles++;
-      this.setInCount++;
       try { localStorage.setItem(POMO_STATS_KEY, JSON.stringify({ cycles: this.totalCycles })); } catch {}
       if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.totalCycles + 1;
-      this.renderCycleDots();
-      SessionLog.push({ id: Date.now(), name: this.names.pomodoro || 'focus', completedAt: Date.now(), duration: this.settings.workDuration });
-
-      if (this.setInCount >= this.settings.longBreakInterval) {
-        this.setMode('longBreak', { autoStart: this.settings.autoStartBreaks });
-      } else {
-        this.setMode('shortBreak', { autoStart: this.settings.autoStartBreaks });
-      }
+      SessionLog.push({ id: Date.now(), name: this.names.pomodoro || 'focus', type: 'pomodoro', completedAt: Date.now(), duration: this.settings.workDuration });
+      this.setMode('shortBreak');
     } else {
-      if (this.currentMode === 'longBreak') {
-        this.setInCount = 0;
-        this.renderCycleDots();
-      }
-      this.setMode('pomodoro', { autoStart: this.settings.autoStartPomodoros });
+      this.setMode('pomodoro');
     }
   }
 
   updateDisplay() {
+    if (this.timerMode === 'focus') return;
     const mins = Math.floor(this.timeLeft / 60);
     const secs = this.timeLeft % 60;
     const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -700,6 +774,7 @@ class PomodoroTimer {
         timeLeft: this.timeLeft,
         isRunning: this.isRunning,
         endsAt: this.endsAt,
+        timerMode: this.timerMode,
         savedAt: Date.now()
       };
       localStorage.setItem(POMO_STATE_KEY, JSON.stringify(payload));
@@ -709,25 +784,33 @@ class PomodoroTimer {
   hydrateFromStorage() {
     let state = null;
     try { state = JSON.parse(localStorage.getItem(POMO_STATE_KEY)); } catch {}
-    if (!state || !this.modes[state.mode]) return;
+    if (!state) return;
 
-    this.currentMode = state.mode;
-    this.elements.tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === this.currentMode));
+    // Restore timer mode
+    if (state.timerMode === 'focus' || state.timerMode === 'pomodoro') {
+      this.timerMode = state.timerMode;
+    }
 
-    if (state.isRunning && typeof state.endsAt === 'number') {
+    // Restore pomodoro sub-mode (guard against removed longBreak)
+    if (state.mode && this.modes[state.mode]) {
+      this.currentMode = state.mode;
+      this.elements.tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === this.currentMode));
+    }
+
+    if (this.timerMode === 'pomodoro' && state.isRunning && typeof state.endsAt === 'number') {
       const remaining = Math.ceil((state.endsAt - Date.now()) / 1000);
       if (remaining > 0) {
         this.timeLeft = remaining;
         this.endsAt = state.endsAt;
         this.isRunning = true;
-        if (this.elements.toggleBtn) this.elements.toggleBtn.textContent = '⏸';
+        if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.pause;
         this.timerId = setInterval(() => this.tick(), 1000);
         if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(this.currentMode === 'pomodoro');
       } else {
         this.timeLeft = 0;
         this.onComplete();
       }
-    } else {
+    } else if (this.timerMode === 'pomodoro') {
       this.timeLeft = (typeof state.timeLeft === 'number' && state.timeLeft > 0) ? state.timeLeft : this.modes[this.currentMode];
     }
   }
@@ -1009,16 +1092,16 @@ class StudyCompanion {
     if (!this.artEl || !this.container) return;
 
     this.buddies = [
-      { id: 1, name: 'Apollo', art: "  __\n<(o )___\n ( ._> /\n  `---'", personality: 'clingy', effect: 'flash' },
-      { id: 2, name: 'Hermes', art: " .-. \n(o o)\n| O \\\n \\   \\\n  `~~~'", personality: 'chaotic', effect: 'blur-dash' },
-      { id: 3, name: 'Athena', art: " ,___,\n [O.o]\n /)__)\n  \" \"", personality: 'stoic', effect: 'fade' },
-      { id: 4, name: 'Artemis', art: " /\\_/\\\n( o.o )\n > ^ <", personality: 'shy', effect: 'shimmer' },
-      { id: 5, name: 'Hephaestus', art: " [0_0]\n /| |\\\n  |_|", personality: 'shy', effect: 'pixelate' },
-      { id: 6, name: 'Dionysus', art: "  ___\n (o o)\n(  _  )", personality: 'chaotic', effect: 'confetti-poof' },
-      { id: 7, name: 'Hestia', art: "  .----.\n /      \\\n(   @  @ )\n \\  --  /\n  `----'", personality: 'clingy', effect: 'ember' },
-      { id: 8, name: 'Ares', art: "  /\\\n (  )\n  \\/", personality: 'chaotic', effect: 'glitch' },
-      { id: 9, name: 'Poseidon', art: "  ,-.\n (o o)\n /| |\\", personality: 'stoic', effect: 'ripple' },
-      { id: 10, name: 'Zeus', art: " ^...^\n<_* *_>\n  \\_/", personality: 'stoic', effect: 'lightning' }
+      { id: 1, name: 'Apollo', art: "  __\n<(o )___\n ( ._> /\n  `---'", personality: 'focused', effect: 'flash' },
+      { id: 2, name: 'Hermes', art: " .-. \n(o o)\n| O \\\n \\   \\\n  `~~~'", personality: 'energetic', effect: 'blur-dash' },
+      { id: 3, name: 'Athena', art: " ,___,\n [O.o]\n /)__)\n  \" \"", personality: 'strategic', effect: 'fade' },
+      { id: 4, name: 'Artemis', art: " /\\_/\\\n( o.o )\n > ^ <", personality: 'calm', effect: 'shimmer' },
+      { id: 5, name: 'Hephaestus', art: " [0_0]\n /| |\\\n  |_|", personality: 'methodical', effect: 'pixelate' },
+      { id: 6, name: 'Dionysus', art: "  ___\n (o o)\n(  _  )", personality: 'creative', effect: 'confetti-poof' },
+      { id: 7, name: 'Hestia', art: "  .----.\n /      \\\n(   @  @ )\n \\  --  /\n  `----'", personality: 'nurturing', effect: 'ember' },
+      { id: 8, name: 'Ares', art: "  /\\\n (  )\n  \\/", personality: 'driven', effect: 'glitch' },
+      { id: 9, name: 'Poseidon', art: "  ,-.\n (o o)\n /| |\\", personality: 'analytical', effect: 'ripple' },
+      { id: 10, name: 'Zeus', art: " ^...^\n<_* *_>\n  \\_/", personality: 'decisive', effect: 'lightning' }
     ];
 
     let saved = localStorage.getItem(BUDDY_KEY);
@@ -1058,9 +1141,16 @@ class StudyCompanion {
 
   personalityIntro() {
     const p = this.buddy.personality;
-    if (p === 'clingy') return 'stay close, ok?';
-    if (p === 'shy') return '...hi.';
-    if (p === 'chaotic') return 'what trouble today?';
+    if (p === 'focused') return "deep work mode. let's go.";
+    if (p === 'energetic') return "energy is high. let's crush this.";
+    if (p === 'strategic') return 'plan first. execute cleanly.';
+    if (p === 'calm') return "take a breath. you're doing great.";
+    if (p === 'methodical') return 'one task at a time. steady.';
+    if (p === 'creative') return 'think different. ideas are waiting.';
+    if (p === 'nurturing') return "you've got this. I'm rooting for you.";
+    if (p === 'driven') return 'no distractions. push through.';
+    if (p === 'analytical') return 'data says: focus time is now.';
+    if (p === 'decisive') return 'decide. act. move forward.';
     return 'ready when you are.';
   }
 
@@ -1084,13 +1174,13 @@ class StudyCompanion {
   scheduleNextTeleport() {
     const p = this.buddy.personality;
     let min, max;
-    if (p === 'clingy') { min = 45000; max = 90000; }
-    else if (p === 'shy') { min = 180000; max = 360000; }
-    else if (p === 'chaotic') { min = 30000; max = 120000; }
-    else { min = 240000; max = 480000; } // stoic
+    if (p === 'energetic' || p === 'driven') { min = 45000; max = 90000; }
+    else if (p === 'creative') { min = 60000; max = 180000; }
+    else if (p === 'calm' || p === 'methodical' || p === 'nurturing') { min = 120000; max = 240000; }
+    else { min = 240000; max = 480000; } // focused, strategic, analytical, decisive
     const next = min + Math.random() * (max - min);
     setTimeout(() => {
-      if (this.buddy.personality === 'chaotic') this.side = this.side === 'left' ? 'right' : 'left';
+      if (p === 'energetic' || p === 'creative') this.side = this.side === 'left' ? 'right' : 'left';
       this.teleport();
       this.scheduleNextTeleport();
     }, next);
@@ -1114,8 +1204,9 @@ class StudyCompanion {
       this.artEl.classList.add('working');
       clearInterval(this.thoughtTimer);
       this.fetchThought();
-      const baseInterval = this.buddy.personality === 'clingy' ? 4 * 60 * 1000
-                          : this.buddy.personality === 'stoic' ? 10 * 60 * 1000
+      const p = this.buddy.personality;
+      const baseInterval = (p === 'energetic' || p === 'driven') ? 4 * 60 * 1000
+                          : (p === 'focused' || p === 'strategic' || p === 'analytical' || p === 'decisive') ? 10 * 60 * 1000
                           : 6 * 60 * 1000;
       this.thoughtTimer = setInterval(() => this.fetchThought(), baseInterval);
     } else {
@@ -1253,9 +1344,58 @@ class PrivacyOverlay {
   close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
 }
 
+class DevMsgOverlay {
+  constructor() {
+    this.overlay = document.getElementById('devMsgOverlay');
+    this.body = document.getElementById('devMsgBody');
+    this.loaded = false;
+    document.getElementById('footerDevName')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
+    document.getElementById('devMsgClose')?.addEventListener('click', () => this.close());
+    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
+    });
+  }
+  open() {
+    this.overlay?.classList.add('open');
+    this.overlay?.setAttribute('aria-hidden', 'false');
+    if (!this.loaded) this.fetchMessage();
+  }
+  close() {
+    this.overlay?.classList.remove('open');
+    this.overlay?.setAttribute('aria-hidden', 'true');
+  }
+  async fetchMessage() {
+    if (!this.body) return;
+    this.body.innerHTML = '<p style="color:var(--term-dimmer);font-style:italic;">loading…</p>';
+    try {
+      const res = await fetch('https://raw.githubusercontent.com/0bsidian-bit/landing-page/main/message.md');
+      if (!res.ok) throw new Error(`${res.status}`);
+      const md = await res.text();
+      this.body.innerHTML = this.parseMarkdown(md);
+      this.loaded = true;
+    } catch (err) {
+      this.body.innerHTML = '<p style="color:var(--term-dimmer);">could not load message. check back later.</p>';
+    }
+  }
+  parseMarkdown(md) {
+    return md
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^## (.+)$/gm, '<h3 style="margin:1em 0 .3em;font-size:1em;color:var(--accent)">$1</h3>')
+      .replace(/^# (.+)$/gm, '<h2 style="margin:1em 0 .3em;font-size:1.1em;color:var(--accent)">$1</h2>')
+      .replace(/^---$/gm, '<hr style="border-color:var(--term-divider);margin:1em 0">')
+      .split(/\n\n+/)
+      .map(block => block.startsWith('<') ? block : `<p>${block.replace(/\n/g, '<br>')}</p>`)
+      .join('\n');
+  }
+}
+
 class InstallHint {
   constructor() {
     this.btn = document.getElementById('installHint');
+    if (this.btn) this.btn.innerHTML = ICONS.install;
     this.deferred = null;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -1277,13 +1417,14 @@ class TerminalApp {
   constructor() {
     document.documentElement.setAttribute('data-theme', 'dark');
     this.chatClient = new ChatClient();
-    this.ui = new TerminalUI();
+    this.ui = new ChatUI();
     this.todo = new TodoManager();
     this.pomodoro = new PomodoroTimer();
     this.tailscale = new TailscaleOverlay();
     this.companion = new StudyCompanion(this.todo);
     this.contact = new ContactModal();
     this.privacy = new PrivacyOverlay();
+    this.devMsg = new DevMsgOverlay();
     this.install = new InstallHint();
 
     this.ui.setAppInstance(this);
@@ -1304,7 +1445,6 @@ class TerminalApp {
     this.turnstileWidgetId = null;
 
     this.animateHeroSubtitle();
-    setTimeout(() => this.bootTerminalEnvironment(), 450);
     this.startHeartbeat();
     this.startStudyingCounter();
     this.setupTabs();
@@ -1313,6 +1453,15 @@ class TerminalApp {
 
     const yearEl = document.getElementById('footerYear');
     if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+    // Warn before closing if timer is active
+    window.addEventListener('beforeunload', (e) => {
+      const pomo = window.appInstance?.pomodoro;
+      if (pomo?.isRunning || (pomo?.focusPhase && pomo.focusPhase !== 'idle')) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
   }
 
   registerServiceWorker() {
@@ -1338,10 +1487,13 @@ class TerminalApp {
         if (target === 'terminal') {
           if (!terminalReady) {
             terminalReady = true;
-            // Initialize Turnstile lazily on first terminal tab open
             this.setupTurnstile();
+            const turns = this.chatClient.getTurns();
+            if (turns > 0) {
+              this.ui.appendSystemMessage(`${turns} exchange${turns !== 1 ? 's' : ''} in memory — use menu to clear`);
+            }
           }
-          setTimeout(() => this.ui.elements.input?.focus(), 150);
+          setTimeout(() => this.ui.input?.focus(), 150);
         }
       });
     });
@@ -1363,32 +1515,24 @@ class TerminalApp {
   }
 
   setupTurnstile() {
-    const wrap = document.getElementById('turnstileWrap');
-    const widget = document.getElementById('turnstileWidget');
+    const wrap = document.getElementById('chatTurnstileWrap');
+    const widget = document.getElementById('chatTurnstileWidget');
     if (!wrap || !widget) return;
 
-    if (this.ui.elements.input) {
-      this.ui.elements.input.setAttribute('contenteditable', 'false');
-      this.ui.elements.input.dataset.placeholder = 'verify to chat...';
-    }
+    this.ui.lockInput();
 
     const renderWidget = () => {
-      this.turnstileWidgetId = turnstile.render('#turnstileWidget', {
+      this.turnstileWidgetId = turnstile.render('#chatTurnstileWidget', {
         sitekey: '0x4AAAAAAC88Z7mu7qgdM_2h',
         theme: 'dark',
         callback: (token) => {
           this.turnstileToken = token;
           wrap.classList.add('verified');
-          if (this.ui.elements.input) {
-            this.ui.elements.input.setAttribute('contenteditable', 'true');
-            this.ui.elements.input.dataset.placeholder = '';
-          }
-          this.ui.printLine('✓ verified — you can chat now', 'ai-system');
-          this.ui.printBlank();
-          this.ui.elements.input?.focus();
+          this.ui.unlockInput();
+          this.ui.appendSystemMessage('✓ verified — start chatting');
         },
         'error-callback': () => {
-          this.ui.printLine('verification failed — refresh to try again', 'ai-error');
+          this.ui.appendSystemMessage('verification failed — refresh to try again');
         }
       });
     };
@@ -1403,7 +1547,7 @@ class TerminalApp {
         else if (attempts >= 20) {
           clearInterval(poll);
           wrap.classList.add('verified');
-          if (this.ui.elements.input) this.ui.elements.input.setAttribute('contenteditable', 'true');
+          this.ui.unlockInput();
         }
       }, 500);
     }
@@ -1438,87 +1582,34 @@ class TerminalApp {
   animateHeroSubtitle() {
     const el = document.getElementById('hero-subtitle');
     if (!el) return;
-    let i = 0;
-    const interval = setInterval(() => {
-      el.textContent = CONFIG.subtitleText.slice(0, ++i);
-      if (i >= CONFIG.subtitleText.length) clearInterval(interval);
-    }, CONFIG.typingSpeedMs);
-  }
-
-  bootTerminalEnvironment() {
-    if (this.ui.elements.terminal) this.ui.elements.terminal.classList.add('ai-mode');
-    if (this.ui.elements.host) this.ui.elements.host.textContent = '0bsidian-bit';
-    if (this.ui.elements.badge) this.ui.elements.badge.textContent = '~ · zsh';
-    if (this.ui.elements.prompt) this.ui.elements.prompt.textContent = '>';
-
-    this.ui.clearTerminal();
-
-    const turns = this.chatClient.getTurns();
-    if (turns > 0) this.ui.printLine(`${turns} exchange${turns !== 1 ? 's' : ''} in memory  ·  /forget to clear`, 'ai-system');
-    else this.ui.printLine('type naturally to chat with AI', 'ai-system');
-
-    this.ui.printBlank();
-  }
-
-  routeInput(raw) {
-    const cmd = raw.trim().toLowerCase();
-    if (!cmd) return;
-    if (!cmd.startsWith('/')) { this.handleAIQuery(raw.trim()); return; }
-    this.handleLocalCommand(cmd);
-  }
-
-  handleLocalCommand(cmd) {
-    this.ui.printUserInput(cmd);
-
-    if (cmd === '/clear') { this.ui.clearTerminal(); return; }
-    if (cmd === '/forget') {
-      this.chatClient.clearMemory();
-      this.ui.printLine('memory cleared.', 'dim');
-      this.ui.printBlank();
-      return;
-    }
-
-    const parts = cmd.split(/\s+/);
-    const key = parts[0].slice(1);
-    const entry = this.ui.commands[key];
-
-    if (entry === undefined) {
-      this.ui.printLine(`command not found: ${cmd}`, 'dim');
-      this.ui.printLine('type /help for the list', 'dim');
-    } else if (typeof entry === 'string') {
-      this.ui.printLine(entry);
-    } else if (typeof entry === 'function') {
-      this.ui.printLine(entry());
-    }
-
-    this.ui.printBlank();
+    setTimeout(() => {
+      let i = 0;
+      const interval = setInterval(() => {
+        el.textContent = CONFIG.subtitleText.slice(0, ++i);
+        if (i >= CONFIG.subtitleText.length) clearInterval(interval);
+      }, CONFIG.typingSpeedMs);
+    }, CONFIG.typingDelayMs);
   }
 
   async handleAIQuery(query) {
     if (!query || this.chatClient.isLoading) return;
 
     this.ui.lockInput();
-    const isFirst = this.chatClient.conversation.length === 0;
-
     this.chatClient.pushUserMessage(query);
+    this.ui.appendUserMessage(query);
 
-    if (!isFirst) this.ui.printSeparator();
-    this.ui.printUserAIMessage(query);
-    this.ui.printBlank();
-
-    const spinner = this.ui.createSpinner();
+    const spinner = this.ui.showTypingIndicator();
 
     try {
       const response = await this.chatClient.ask();
       spinner.remove();
-      this.ui.printBotAIMessage(response);
+      this.ui.appendAIMessage(response);
       this.chatClient.pushAssistantMessage(response);
     } catch (err) {
       spinner.remove();
       this.chatClient.popLastMessage();
-      this.ui.printLine(`error: ${err.message}`, 'ai-error');
+      this.ui.appendSystemMessage(`error: ${err.message}`);
     } finally {
-      this.ui.printBlank();
       this.ui.unlockInput();
       this.ui.scrollDown();
     }
