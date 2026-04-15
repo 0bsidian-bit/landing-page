@@ -4,6 +4,7 @@
 
 const CONFIG = {
   aiHistoryKey: 'lt-ai-history',
+  chatThreadsKey: 'lt-chat-threads',
   subtitleText: 'notes from a working physician',
   typingSpeedMs: 55,
   typingDelayMs: 2500,
@@ -81,43 +82,99 @@ class DOMUtils {
 
 class ChatClient {
   constructor() {
-    this.conversation = [];
     this.isLoading = false;
-    this.loadHistory();
+    this.threads = [];
+    this.activeThreadId = null;
+    this._loadThreads();
+    if (this.threads.length === 0) this._createThread();
   }
 
-  loadHistory() {
+  _loadThreads() {
     try {
-      const saved = localStorage.getItem(CONFIG.aiHistoryKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) this.conversation = parsed;
+      const saved = JSON.parse(localStorage.getItem(CHAT_THREADS_KEY));
+      if (Array.isArray(saved) && saved.length > 0) {
+        this.threads = saved;
+        this.activeThreadId = this.threads[0].id;
+        return;
+      }
+    } catch {}
+    // Migrate legacy flat history
+    try {
+      const legacy = JSON.parse(localStorage.getItem(CONFIG.aiHistoryKey));
+      if (Array.isArray(legacy) && legacy.length > 0) {
+        const thread = { id: Date.now(), title: 'previous chat', createdAt: Date.now(), messages: legacy };
+        this.threads = [thread];
+        this.activeThreadId = thread.id;
+        this._saveThreads();
       }
     } catch {}
   }
 
-  saveHistory() {
-    try { localStorage.setItem(CONFIG.aiHistoryKey, JSON.stringify(this.conversation)); } catch {}
+  _saveThreads() {
+    try { localStorage.setItem(CHAT_THREADS_KEY, JSON.stringify(this.threads)); } catch {}
+  }
+
+  _createThread() {
+    const thread = { id: Date.now(), title: 'new chat', createdAt: Date.now(), messages: [] };
+    this.threads.unshift(thread);
+    if (this.threads.length > 10) this.threads.splice(10);
+    this.activeThreadId = thread.id;
+    this._saveThreads();
+    return thread;
+  }
+
+  get activeThread() {
+    return this.threads.find(t => t.id === this.activeThreadId) || this.threads[0];
+  }
+
+  get conversation() { return this.activeThread?.messages || []; }
+
+  newThread() { this._createThread(); }
+
+  switchThread(id) {
+    const t = this.threads.find(t => t.id === id);
+    if (t) this.activeThreadId = t.id;
+  }
+
+  clearAll() {
+    this.threads = [];
+    try { localStorage.removeItem(CHAT_THREADS_KEY); } catch {}
+    this._createThread();
   }
 
   clearMemory() {
-    this.conversation = [];
-    try { localStorage.removeItem(CONFIG.aiHistoryKey); } catch {}
+    const t = this.activeThread;
+    if (t) { t.messages = []; this._saveThreads(); }
   }
 
-  pushUserMessage(content) { this.conversation.push({ role: 'user', content }); }
-  pushAssistantMessage(content) { this.conversation.push({ role: 'assistant', content }); this.saveHistory(); }
-  popLastMessage() { this.conversation.pop(); }
-  getTurns() { return Math.floor(this.conversation.length / 2); }
+  pushUserMessage(content) {
+    const t = this.activeThread;
+    if (!t) return;
+    if (t.messages.length === 0) {
+      t.title = content.slice(0, 28) + (content.length > 28 ? '…' : '');
+    }
+    t.messages.push({ role: 'user', content });
+  }
+
+  pushAssistantMessage(content) {
+    const t = this.activeThread;
+    if (!t) return;
+    t.messages.push({ role: 'assistant', content });
+    this._saveThreads();
+  }
+
+  popLastMessage() { this.activeThread?.messages.pop(); }
+  getTurns() { return Math.floor((this.activeThread?.messages?.length || 0) / 2); }
 
   async ask() {
     this.isLoading = true;
     try {
       const token = window.appInstance?.turnstileToken;
+      const messages = this.conversation.slice(-20);
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: this.conversation, turnstileToken: token })
+        body: JSON.stringify({ messages, turnstileToken: token })
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -137,25 +194,25 @@ class ChatUI {
     this.messagesEl = document.getElementById('chatMessages');
     this.input = document.getElementById('chatInput');
     this.sendBtn = document.getElementById('chatSendBtn');
-    this.menuBtn = document.getElementById('chatMenuBtn');
-    this.menuDropdown = document.getElementById('chatMenuDropdown');
     this.typingIndicator = null;
     this.isLocked = true; // locked until Turnstile verified
     this.initEvents();
-    // Set send icon
     if (this.sendBtn) this.sendBtn.innerHTML = ICONS.send;
   }
 
   setAppInstance(app) {
     this.app = app;
-    document.getElementById('chatForget')?.addEventListener('click', () => {
-      this.app.chatClient.clearMemory();
-      this.appendSystemMessage('memory cleared.');
-      this.menuDropdown?.classList.remove('open');
-    });
-    document.getElementById('chatClear')?.addEventListener('click', () => {
+    document.getElementById('chatNewThread')?.addEventListener('click', () => {
+      this.app.chatClient.newThread();
       this.clearMessages();
-      this.menuDropdown?.classList.remove('open');
+      this.renderSidebar();
+    });
+    document.getElementById('chatClearAll')?.addEventListener('click', async () => {
+      const ok = await siteConfirm('clear all chat history?');
+      if (!ok) return;
+      this.app.chatClient.clearAll();
+      this.clearMessages();
+      this.renderSidebar();
     });
   }
 
@@ -164,14 +221,33 @@ class ChatUI {
     this.input?.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.submitInput(); }
     });
-    this.menuBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.menuDropdown?.classList.toggle('open');
+  }
+
+  renderSidebar() {
+    const list = document.getElementById('chatThreadList');
+    if (!list || !this.app) return;
+    list.replaceChildren();
+    this.app.chatClient.threads.forEach(thread => {
+      const btn = document.createElement('button');
+      btn.className = 'chat-thread-item';
+      if (thread.id === this.app.chatClient.activeThreadId) btn.classList.add('active');
+      btn.textContent = thread.title || 'untitled';
+      btn.title = thread.title;
+      btn.addEventListener('click', () => {
+        this.app.chatClient.switchThread(thread.id);
+        this.clearMessages();
+        this._replayThread(this.app.chatClient.activeThread);
+        this.renderSidebar();
+      });
+      list.appendChild(btn);
     });
-    document.addEventListener('click', (e) => {
-      if (!this.menuDropdown?.contains(e.target) && e.target !== this.menuBtn) {
-        this.menuDropdown?.classList.remove('open');
-      }
+  }
+
+  _replayThread(thread) {
+    if (!thread?.messages) return;
+    thread.messages.forEach(msg => {
+      if (msg.role === 'user') this.appendUserMessage(msg.content);
+      else if (msg.role === 'assistant') this.appendAIMessage(msg.content);
     });
   }
 
@@ -197,6 +273,7 @@ class ChatUI {
     msg.appendChild(DOMUtils.parseMarkdown(text));
     this.messagesEl?.appendChild(msg);
     this.scrollDown();
+    this.renderSidebar();
   }
 
   appendSystemMessage(text) {
@@ -278,6 +355,20 @@ class PomoAudio {
     osc.connect(gain); gain.connect(this.ctx.destination);
     osc.start(); osc.stop(this.ctx.currentTime + 2);
   }
+
+  playAmbient() {
+    if (!this.ctx) return;
+    [200, 250, 310].forEach(freq => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      gain.gain.setValueAtTime(0.035, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 3);
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      osc.start(); osc.stop(this.ctx.currentTime + 3);
+    });
+  }
 }
 
 const POMO_STATE_KEY = '0bsidian_pomo_state_v1';
@@ -288,6 +379,8 @@ const POMO_LOG_KEY = '0bsidian_pomo_log_v1';
 const POMO_CIRCUMFERENCE = 439.823;
 const POMO_SOUND_KEY = '0bsidian_sound_enabled';
 const POMO_TIMER_MODE_KEY = '0bsidian_timer_mode';
+const BREAK_TAGS_KEY = '0bsidian_break_tags_v1';
+const CHAT_THREADS_KEY = 'lt-chat-threads';
 const POMO_DEFAULT_SETTINGS = {
   workDuration: 25,
   shortBreakDuration: 5,
@@ -337,6 +430,8 @@ class PomodoroTimer {
     this.breakElapsed = 0;
     this.focusPhase = 'idle'; // 'idle' | 'working' | 'breaking'
     this.focusTimerId = null;
+    this._currentSessionName = null;
+    this.todo = null; // wired up by TerminalApp after construction
 
     this.audio = new PomoAudio();
 
@@ -373,7 +468,7 @@ class PomodoroTimer {
     this.updateSoundBtn();
 
     // Set initial icon on toggle button
-    if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+    this.updateToggleBtn();
     if (this.elements.resetBtn) this.elements.resetBtn.innerHTML = ICONS.reset;
     if (this.elements.settingsBtn) this.elements.settingsBtn.innerHTML = ICONS.settings;
 
@@ -499,6 +594,32 @@ class PomodoroTimer {
     this.elements.soundBtn.title = this.soundEnabled ? 'Sound on' : 'Sound off';
   }
 
+  updateToggleBtn() {
+    const btn = this.elements.toggleBtn;
+    if (!btn) return;
+    if (this.timerMode === 'focus') {
+      if (this.focusPhase === 'working') {
+        btn.innerHTML = ICONS.pause;
+        btn.title = 'End focus, start break';
+      } else {
+        btn.innerHTML = ICONS.play;
+        btn.title = this.focusPhase === 'breaking' ? 'Resume focus' : 'Start';
+      }
+    } else {
+      const hasStarted = this.timeLeft < this.modes[this.currentMode];
+      if (this.isRunning) {
+        btn.innerHTML = ICONS.pause;
+        btn.title = 'Pause';
+      } else if (hasStarted && this.timeLeft > 0) {
+        btn.innerHTML = ICONS.play;
+        btn.title = 'Resume';
+      } else {
+        btn.innerHTML = ICONS.play;
+        btn.title = 'Start';
+      }
+    }
+  }
+
   switchTimerMode(mode) {
     this.stopFocusTick();
     this.pause();
@@ -510,7 +631,7 @@ class PomodoroTimer {
     this.applyTimerModeUI();
     if (this.timerMode === 'focus') {
       this.updateFocusDisplay();
-      if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+      this.updateToggleBtn();
     } else {
       this.updateDisplay();
       this.updateName();
@@ -519,36 +640,62 @@ class PomodoroTimer {
 
   // ── Focus mode ──────────────────────────────────────────────────────────────
 
-  focusToggle() {
+  async focusToggle() {
     this.audio.init();
     if (this.focusPhase === 'idle') {
+      // Subject select prompt
+      let sessionName = this.names.pomodoro || 'focus';
+      const subjectModal = window.appInstance?.subjectSelectModal;
+      if (subjectModal && this.todo?.subjects?.length > 0) {
+        const chosen = await subjectModal.show();
+        if (chosen) sessionName = chosen;
+      }
+      this._currentSessionName = sessionName;
       this.focusPhase = 'working';
       this.focusElapsed = 0;
       this.startFocusTick();
-      if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.pause;
+      this.updateToggleBtn();
       if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(true);
     } else if (this.focusPhase === 'working') {
       this.stopFocusTick();
       SessionLog.push({
-        id: Date.now(), name: this.names.pomodoro || 'focus', type: 'focus',
-        completedAt: Date.now(), duration: Math.max(1, Math.round(this.focusElapsed / 60))
+        id: Date.now(),
+        name: this._currentSessionName || this.names.pomodoro || 'focus',
+        type: 'focus',
+        completedAt: Date.now(),
+        duration: Math.max(1, Math.round(this.focusElapsed / 60))
       });
       if (this.soundEnabled && this.settings.bell) this.audio.playBell();
+      if (this.soundEnabled) setTimeout(() => this.audio.playAmbient(), 2200);
       this.focusPhase = 'breaking';
       this.breakElapsed = 0;
       this.startFocusTick();
-      if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+      this.updateToggleBtn();
       if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(false);
     } else if (this.focusPhase === 'breaking') {
       this.stopFocusTick();
-      SessionLog.push({
-        id: Date.now(), name: 'break', type: 'break',
-        completedAt: Date.now(), duration: Math.max(1, Math.round(this.breakElapsed / 60))
-      });
+      const breakDur = Math.max(1, Math.round(this.breakElapsed / 60));
+      const breakTagModal = window.appInstance?.breakTagModal;
+      if (breakTagModal) {
+        const tag = await breakTagModal.show(this.breakElapsed);
+        if (tag !== null) {
+          SessionLog.push({
+            id: Date.now(), name: '#' + tag, type: 'break',
+            completedAt: Date.now(), duration: breakDur
+          });
+        }
+        // null = "don't record"
+      } else {
+        SessionLog.push({
+          id: Date.now(), name: 'break', type: 'break',
+          completedAt: Date.now(), duration: breakDur
+        });
+      }
       this.focusPhase = 'working';
       this.focusElapsed = 0;
       this.startFocusTick();
-      if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.pause;
+      if (this.soundEnabled && this.settings.bell) this.audio.playBell();
+      this.updateToggleBtn();
       if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(true);
     }
   }
@@ -577,7 +724,7 @@ class PomodoroTimer {
     this.focusElapsed = 0;
     this.breakElapsed = 0;
     this.updateFocusDisplay();
-    if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+    this.updateToggleBtn();
     document.title = this.baseTitle;
     if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(false);
   }
@@ -681,9 +828,9 @@ class PomodoroTimer {
     else this.elements.progress.style.stroke = '#888888';
   }
 
-  toggle() {
+  async toggle() {
     if (this.timerMode === 'focus') {
-      this.focusToggle();
+      await this.focusToggle();
       return;
     }
     this.audio.init();
@@ -698,7 +845,7 @@ class PomodoroTimer {
     if (this.isRunning || this.timeLeft <= 0) return;
     this.isRunning = true;
     this.endsAt = Date.now() + this.timeLeft * 1000;
-    if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.pause;
+    this.updateToggleBtn();
     this.timerId = setInterval(() => this.tick(), 1000);
     this.saveState();
     if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(this.currentMode === 'pomodoro');
@@ -710,7 +857,7 @@ class PomodoroTimer {
     }
     this.isRunning = false;
     this.endsAt = null;
-    if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.play;
+    this.updateToggleBtn();
     clearInterval(this.timerId);
     document.title = this.baseTitle;
     this.saveState();
@@ -803,7 +950,7 @@ class PomodoroTimer {
         this.timeLeft = remaining;
         this.endsAt = state.endsAt;
         this.isRunning = true;
-        if (this.elements.toggleBtn) this.elements.toggleBtn.innerHTML = ICONS.pause;
+        this.updateToggleBtn();
         this.timerId = setInterval(() => this.tick(), 1000);
         if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(this.currentMode === 'pomodoro');
       } else {
@@ -844,6 +991,28 @@ class TodoManager {
     if (!val) return;
     this.subjects.push({ id: Date.now(), subject: val, color: this.color.value, tasks: [] });
     this.input.value = '';
+    // Smart duration presets
+    const pomo = window.appInstance?.pomodoro;
+    if (pomo) {
+      const lower = val.toLowerCase();
+      if (lower.includes('uworld')) {
+        pomo.settings.workDuration = 60;
+        pomo.modes.pomodoro = 3600;
+        pomo.saveSettings();
+        const el = document.getElementById('settingWorkDur');
+        const valEl = document.getElementById('settingWorkDurVal');
+        if (el) el.value = 60;
+        if (valEl) valEl.textContent = 60;
+      } else if (lower.includes('first aid') || lower.includes('bootcamp')) {
+        pomo.settings.workDuration = 25;
+        pomo.modes.pomodoro = 1500;
+        pomo.saveSettings();
+        const el = document.getElementById('settingWorkDur');
+        const valEl = document.getElementById('settingWorkDurVal');
+        if (el) el.value = 25;
+        if (valEl) valEl.textContent = 25;
+      }
+    }
     this.save();
     this.render();
   }
@@ -1349,7 +1518,6 @@ class DevMsgOverlay {
     this.overlay = document.getElementById('devMsgOverlay');
     this.body = document.getElementById('devMsgBody');
     this.loaded = false;
-    document.getElementById('footerDevName')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
     document.getElementById('devMsgClose')?.addEventListener('click', () => this.close());
     this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
     document.addEventListener('keydown', e => {
@@ -1392,6 +1560,144 @@ class DevMsgOverlay {
   }
 }
 
+class BreakTagModal {
+  constructor() {
+    this.overlay = document.getElementById('breakTagOverlay');
+    this.tagGrid = document.getElementById('breakTagGrid');
+    this.durationText = document.getElementById('breakDurationText');
+    this._resolve = null;
+    this.tags = this._loadTags();
+    this._renderTags();
+    document.getElementById('breakTagSkip')?.addEventListener('click', () => this._pick(null));
+    document.getElementById('breakTagEdit')?.addEventListener('click', () => this._editTags());
+    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this._pick(null); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this._pick(null);
+    });
+  }
+
+  _loadTags() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(BREAK_TAGS_KEY));
+      if (Array.isArray(saved) && saved.length >= 2) return saved;
+    } catch {}
+    return ['meals', 'bathroom', 'rest', 'other'];
+  }
+
+  _saveTags() {
+    try { localStorage.setItem(BREAK_TAGS_KEY, JSON.stringify(this.tags)); } catch {}
+  }
+
+  _renderTags() {
+    if (!this.tagGrid) return;
+    this.tagGrid.replaceChildren();
+    this.tags.forEach(tag => {
+      const btn = document.createElement('button');
+      btn.className = 'break-tag-btn pop-btn';
+      btn.textContent = '#' + tag;
+      btn.addEventListener('click', () => this._pick(tag));
+      this.tagGrid.appendChild(btn);
+    });
+  }
+
+  show(breakDurationSecs) {
+    return new Promise(resolve => {
+      this._resolve = resolve;
+      const h = Math.floor(breakDurationSecs / 3600);
+      const m = Math.floor((breakDurationSecs % 3600) / 60);
+      const s = breakDurationSecs % 60;
+      const parts = [];
+      if (h) parts.push(`${h}h`);
+      if (m) parts.push(`${m}m`);
+      if (s || !parts.length) parts.push(`${s}s`);
+      if (this.durationText) this.durationText.textContent = 'break for ' + parts.join(' ');
+      this.overlay?.classList.add('open');
+      this.overlay?.setAttribute('aria-hidden', 'false');
+    });
+  }
+
+  _pick(tag) {
+    this.overlay?.classList.remove('open');
+    this.overlay?.setAttribute('aria-hidden', 'true');
+    if (this._resolve) { this._resolve(tag); this._resolve = null; }
+  }
+
+  async _editTags() {
+    const newTags = [];
+    for (let i = 0; i < this.tags.length; i++) {
+      const val = prompt(`rename #${this.tags[i]}:`, this.tags[i]);
+      newTags.push((val || this.tags[i]).trim().replace(/\s+/g, '-').toLowerCase().slice(0, 20));
+    }
+    this.tags = newTags;
+    this._saveTags();
+    this._renderTags();
+  }
+}
+
+class SubjectSelectModal {
+  constructor(todoManager) {
+    this.todo = todoManager;
+    this.overlay = document.getElementById('subjectSelectOverlay');
+    this.list = document.getElementById('subjectSelectList');
+    this._resolve = null;
+    document.getElementById('subjectSelectSkip')?.addEventListener('click', () => this._pick(null));
+    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this._pick(null); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this._pick(null);
+    });
+  }
+
+  show() {
+    return new Promise(resolve => {
+      this._resolve = resolve;
+      if (!this.list) { resolve(null); return; }
+      const subjects = this.todo?.subjects || [];
+      if (subjects.length === 0) { resolve(null); return; }
+      this.list.replaceChildren();
+      subjects.forEach(subj => {
+        const btn = document.createElement('button');
+        btn.className = 'subject-select-btn pop-btn';
+        const dot = document.createElement('span');
+        dot.className = 'subject-select-dot';
+        dot.style.backgroundColor = subj.color;
+        btn.appendChild(dot);
+        btn.appendChild(document.createTextNode(subj.subject));
+        btn.addEventListener('click', () => this._pick(subj.subject));
+        this.list.appendChild(btn);
+      });
+      this.overlay?.classList.add('open');
+      this.overlay?.setAttribute('aria-hidden', 'false');
+    });
+  }
+
+  _pick(name) {
+    this.overlay?.classList.remove('open');
+    this.overlay?.setAttribute('aria-hidden', 'true');
+    if (this._resolve) { this._resolve(name); this._resolve = null; }
+  }
+}
+
+class DevContactOverlay {
+  constructor(contactModal) {
+    this.overlay = document.getElementById('devContactOverlay');
+    this.contactModal = contactModal;
+    document.getElementById('footerDevName')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
+    document.getElementById('devContactGetInTouch')?.addEventListener('click', () => {
+      this.close();
+      this.contactModal?.open();
+    });
+    document.getElementById('devContactGithub')?.addEventListener('click', () => {
+      window.open('https://github.com/0bsidian-bit', '_blank', 'noopener');
+    });
+    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
+    });
+  }
+  open() { this.overlay?.classList.add('open'); this.overlay?.setAttribute('aria-hidden', 'false'); }
+  close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
+}
+
 class InstallHint {
   constructor() {
     this.btn = document.getElementById('installHint');
@@ -1420,12 +1726,16 @@ class TerminalApp {
     this.ui = new ChatUI();
     this.todo = new TodoManager();
     this.pomodoro = new PomodoroTimer();
+    this.pomodoro.todo = this.todo;
     this.tailscale = new TailscaleOverlay();
     this.companion = new StudyCompanion(this.todo);
     this.contact = new ContactModal();
     this.privacy = new PrivacyOverlay();
     this.devMsg = new DevMsgOverlay();
     this.install = new InstallHint();
+    this.breakTagModal = new BreakTagModal();
+    this.subjectSelectModal = new SubjectSelectModal(this.todo);
+    this.devContact = new DevContactOverlay(this.contact);
 
     this.ui.setAppInstance(this);
 
@@ -1451,9 +1761,6 @@ class TerminalApp {
     this.setupChatScroll();
     this.registerServiceWorker();
 
-    const yearEl = document.getElementById('footerYear');
-    if (yearEl) yearEl.textContent = new Date().getFullYear();
-
     // Warn before closing if timer is active
     window.addEventListener('beforeunload', (e) => {
       const pomo = window.appInstance?.pomodoro;
@@ -1474,9 +1781,11 @@ class TerminalApp {
     const tabs = document.querySelectorAll('.dash-tab');
     const studyPane = document.getElementById('dashStudyPane');
     const terminalPane = document.getElementById('dashTerminalPane');
+    const whatsNewPane = document.getElementById('dashWhatsNewPane');
     if (!tabs.length || !studyPane || !terminalPane) return;
 
     let terminalReady = false;
+    let whatsNewLoaded = false;
 
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -1484,19 +1793,58 @@ class TerminalApp {
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === target));
         studyPane.classList.toggle('dash-pane--hidden', target !== 'study');
         terminalPane.classList.toggle('dash-pane--hidden', target !== 'terminal');
+        if (whatsNewPane) whatsNewPane.classList.toggle('dash-pane--hidden', target !== 'whats-new');
+
+        // Contextual settings: only visible on study tab
+        const pomodoroCard = document.getElementById('pomodoroCard');
+        if (pomodoroCard) pomodoroCard.classList.toggle('settings-hidden', target !== 'study');
+
         if (target === 'terminal') {
           if (!terminalReady) {
             terminalReady = true;
             this.setupTurnstile();
             const turns = this.chatClient.getTurns();
             if (turns > 0) {
-              this.ui.appendSystemMessage(`${turns} exchange${turns !== 1 ? 's' : ''} in memory — use menu to clear`);
+              this.ui.appendSystemMessage(`${turns} exchange${turns !== 1 ? 's' : ''} in memory`);
             }
           }
+          this.ui.renderSidebar();
           setTimeout(() => this.ui.input?.focus(), 150);
+        }
+
+        if (target === 'whats-new' && !whatsNewLoaded) {
+          whatsNewLoaded = true;
+          this.loadWhatsNew();
         }
       });
     });
+  }
+
+  loadWhatsNew() {
+    const container = document.getElementById('whatsNewContent');
+    if (!container) return;
+    fetch('https://raw.githubusercontent.com/0bsidian-bit/landing-page/main/updates.md')
+      .then(r => r.ok ? r.text() : Promise.reject(r.status))
+      .then(md => { container.innerHTML = this._renderMarkdown(md); })
+      .catch(err => {
+        container.innerHTML = `<p class="whats-new-loading">could not load updates (${err}).</p>`;
+      });
+  }
+
+  _renderMarkdown(md) {
+    return md
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/^---$/gm, '<hr>')
+      .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+      .split(/\n\n+/)
+      .map(block => block.startsWith('<') ? block : `<p>${block.replace(/\n/g, '<br>')}</p>`)
+      .join('\n');
   }
 
   switchToTab(tab) {
