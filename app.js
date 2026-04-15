@@ -1073,16 +1073,8 @@ class StudyCompanion {
   }
 
   positionOnEdge() {
-    if (!this.container) return;
-    // Always fixed at top-left corner
-    this.side = 'left';
-    this.container.style.position = 'fixed';
-    this.container.style.transition = 'none';
-    this.container.style.left = '24px';
-    this.container.style.top = '80px';
-    this.container.style.right = 'auto';
-    this.container.style.bottom = 'auto';
-    this.container.dataset.side = 'left';
+    // Companion lives in the topbar — clear any stale inline styles
+    if (this.container) this.container.removeAttribute('style');
   }
 
   reactToCursor() {

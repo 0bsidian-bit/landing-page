@@ -21,19 +21,18 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="0bsidian">
-<link rel="stylesheet" href="/styles.css?v=5">
+<link rel="stylesheet" href="/styles.css?v=6">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script src="/app.js?v=5" defer></script>
+<script src="/app.js?v=6" defer></script>
 </head>
 <body>
 <div class="page">
     <div class="topbar">
       <div class="monogram">
-        <span class="monogram-mark">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"/>
-          </svg>
-        </span>
+        <div class="study-companion" id="studyCompanion">
+          <div class="companion-art" id="companionArt"></div>
+          <div class="speech-bubble" id="companionSpeech"></div>
+        </div>
       </div>
       <div class="topbar-right">
         <a class="login-pill" id="loginPill" href="#" title="Private portal">login</a>
@@ -323,11 +322,6 @@
     <div class="privacy-footer" id="privacyFooter">
       privacy-first. no analytics, no trackers. tasks and chats live only in your browser.
     </div>
-  </div>
-
-  <div class="study-companion" id="studyCompanion">
-    <div class="speech-bubble" id="companionSpeech"></div>
-    <div class="companion-art" id="companionArt"></div>
   </div>
 
   <button class="install-hint pop-btn" id="installHint" hidden>install app</button>
