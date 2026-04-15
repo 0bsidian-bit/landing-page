@@ -26,36 +26,36 @@
 }
 
 :root {
-  --bg: #1a1a1e;
-  --bg-deep: #141416;
-  --fg: #eceae2;
-  --fg-soft: #d4d1c4;
-  --fg-dim: #a09d92;
-  --fg-dimmer: #6b6860;
+  --bg: #0e0e0e;
+  --bg-deep: #080808;
+  --fg: #f0ede8;
+  --fg-soft: #d4d1cb;
+  --fg-dim: #9a9792;
+  --fg-dimmer: #585450;
 
-  --term-bg: #262630;
-  --term-fg: #eceae2;
-  --term-dim: #a09d92;
-  --term-dimmer: #6b6860;
-  --term-divider: rgba(236, 234, 226, 0.08);
-  --term-scrollbar: rgba(236, 234, 226, 0.12);
-  --term-scrollbar-hover: rgba(236, 234, 226, 0.22);
+  --term-bg: #181818;
+  --term-fg: #f0ede8;
+  --term-dim: #9a9792;
+  --term-dimmer: #585450;
+  --term-divider: rgba(240, 237, 232, 0.07);
+  --term-scrollbar: rgba(240, 237, 232, 0.10);
+  --term-scrollbar-hover: rgba(240, 237, 232, 0.20);
 
-  --accent: #a78bfa;
-  --accent-soft: #c4b5fd;
+  --accent: #d4795a;
+  --accent-soft: #e8a48e;
 
-  --wash: rgba(167, 139, 250, 0.06);
+  --wash: rgba(212, 121, 90, 0.05);
   --grain-blend: screen;
-  --grain-opacity: 0.05;
+  --grain-opacity: 0.03;
 
   --shadow:
-    0 1px 2px rgba(0, 0, 0, 0.2),
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    0 24px 64px rgba(0, 0, 0, 0.25);
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    0 24px 64px rgba(0, 0, 0, 0.45);
   --shadow-hover:
-    0 1px 2px rgba(0, 0, 0, 0.25),
-    0 12px 32px rgba(0, 0, 0, 0.4),
-    0 32px 80px rgba(0, 0, 0, 0.3);
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 12px 32px rgba(0, 0, 0, 0.65),
+    0 32px 80px rgba(0, 0, 0, 0.55);
 
   --font-serif: 'Fraunces', 'Iowan Old Style', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
@@ -307,7 +307,7 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 
 .name:hover {
   transform: scale(1.02);
-  text-shadow: 0 4px 24px rgba(124, 106, 175, 0.15);
+  text-shadow: 0 4px 24px rgba(212, 121, 90, 0.15);
 }
 
 .chat-scroll-btn {
@@ -539,11 +539,11 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 }
 
 .terminal.ai-mode .prompt {
-  color: #a78bfa;
+  color: var(--accent);
 }
 
 .terminal.ai-mode .caret {
-  background: #a78bfa;
+  background: var(--accent);
 }
 
 .terminal.ai-mode .cmd-input {
@@ -572,13 +572,13 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 
 .line.ai-response {
   color: var(--term-fg);
-  border-left: 2px solid #a78bfa;
+  border-left: 2px solid var(--accent);
   padding-left: 10px;
   margin-left: 2px;
 }
 
 .line.ai-response strong {
-  color: #c4b5fd;
+  color: var(--accent-soft);
   font-weight: 600;
 }
 
@@ -611,7 +611,7 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 }
 
 .ai-who-bot {
-  color: #a78bfa;
+  color: var(--accent-soft);
 }
 
 .line.ai-label {
@@ -633,7 +633,7 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 }
 
 .line.model-option-active {
-  color: #a78bfa;
+  color: var(--accent);
 }
 
 .line.separator {
@@ -910,7 +910,7 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   font-size: 16px;
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(139, 108, 227, 0.3);
+  box-shadow: 0 4px 12px rgba(212, 121, 90, 0.3);
 }
 
 .pomo-btn:hover {
@@ -1213,7 +1213,7 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 }
 .todo-task-inline-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(139, 108, 227, 0.15);
+  box-shadow: 0 0 0 2px rgba(212, 121, 90, 0.15);
 }
 
 /* ── Study Companion ──────────────────────────────────────────────────────── */
@@ -1854,7 +1854,7 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(167, 139, 250, 0.4);
+  box-shadow: 0 8px 24px rgba(212, 121, 90, 0.4);
 }
 .install-hint[hidden] { display: none; }
 

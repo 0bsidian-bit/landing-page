@@ -4,8 +4,8 @@
   "description": "Notes from a working physician. Productivity hub with Pomodoro, tasks, and AI chat.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1a1e",
-  "theme_color": "#1a1a1e",
+  "background_color": "#0e0e0e",
+  "theme_color": "#0e0e0e",
   "orientation": "portrait-primary",
   "icons": [
     {
