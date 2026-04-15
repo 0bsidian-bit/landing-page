@@ -884,33 +884,33 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 .chat-pane {
   position: relative;
   width: 100%;
-  max-width: 900px;
+  display: grid;
+  grid-template-columns: 62fr 38fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.chat-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   height: 460px;
   background: var(--term-bg);
   border-radius: 14px;
-  display: flex;
-  flex-direction: row;
   overflow: hidden;
   box-shadow: var(--shadow);
 }
 
-.chat-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  border-right: 1px solid var(--term-divider);
-}
-
 .chat-sidebar {
-  width: 196px;
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  padding: 10px 8px;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.015);
+  height: 460px;
+  background: var(--term-bg);
+  border-radius: 14px;
+  padding: 14px 12px;
+  gap: 8px;
   overflow: hidden;
+  box-shadow: var(--shadow);
 }
 
 .chat-sidebar-new {
@@ -1401,15 +1401,15 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   display: none;
   position: absolute;
   top: 68px;
-  left: 12px;
   right: 12px;
+  width: 190px;
   z-index: 30;
-  background: rgba(14, 14, 14, 0.88);
+  background: rgba(14, 14, 14, 0.92);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(240, 237, 232, 0.10);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   font-size: 12px;
   font-family: var(--font-mono);
   text-align: left;
@@ -2013,8 +2013,8 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 /* (legacy pomo stats removed — now covered by .pomo-cycles-wrap) */
 
 @media (max-width: 800px) {
+  .chat-pane { grid-template-columns: 1fr; }
   .chat-sidebar { display: none; }
-  .chat-main { border-right: none; }
 
   .page {
     padding: 16px 12px;
@@ -2701,6 +2701,8 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 .dashboard-layout.fullscreen .dash-pane:not(.dash-pane--hidden) {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-layout.fullscreen .productivity-hub {
@@ -2712,6 +2714,23 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   max-width: none;
   height: 100%;
   min-height: 500px;
+}
+
+.dashboard-layout.fullscreen .chat-pane {
+  height: 100%;
+}
+
+.dashboard-layout.fullscreen .chat-main,
+.dashboard-layout.fullscreen .chat-sidebar {
+  height: 100%;
+  min-height: 0;
+}
+
+.dashboard-layout.fullscreen .whats-new-pane {
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  border-radius: 14px;
 }
 
 .dashboard-layout.fullscreen .pomo-circle-wrap {
