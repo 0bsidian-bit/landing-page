@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Dr. Lokesh Tewari — Notes from a working physician</title>
 <meta name="description" content="Notes from a working physician. MBBS, junior resident, homelab tinkerer.">
 <link rel="canonical" href="https://lokeshtewari.uk">
@@ -14,12 +14,16 @@
 <meta name="twitter:title" content="Dr. Lokesh Tewari — Notes from a working physician">
 <meta name="twitter:description" content="Notes from a working physician. MBBS, junior resident, homelab tinkerer.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-
+<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
 <meta name="author" content="Dr. Lokesh Tewari">
 <meta name="theme-color" content="#1a1a1e">
-<link rel="stylesheet" href="/styles.css?v=3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="0bsidian">
+<link rel="stylesheet" href="/styles.css?v=4">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script src="/app.js" defer></script>
+<script src="/app.js?v=4" defer></script>
 </head>
 <body>
 <div class="page">
@@ -32,7 +36,9 @@
         </span>
         <span class="monogram-name" id="monogramName">Dr. Lokesh Tewari</span>
       </div>
-      <div class="topbar-right"></div>
+      <div class="topbar-right">
+        <a class="login-pill" id="loginPill" href="#" title="Private portal">login</a>
+      </div>
     </div>
 
     <div class="hero">
@@ -47,34 +53,29 @@
       </div>
       <p class="subtitle" id="hero-subtitle"></p>
 
-      <div class="dashboard-layout">
+      <div class="dashboard-layout" id="dashboardLayout">
         <div class="productivity-hub" id="prodHub">
           <div class="hub-controls">
-            <button class="hub-fullscreen-btn" id="hubFullscreenBtn" title="Toggle Fullscreen">[⛶] fullscreen</button>
-          </div>
-
-          <!-- Todo List Inject -->
-          <div class="todo-card" id="todoCard">
-            <div class="todo-header">tasks</div>
-            <div class="todo-input-wrap">
-              <input type="color" id="todoColor" value="#e07878" title="Subject Color">
-              <input type="text" id="todoInput" placeholder="add subject..." autocomplete="off">
-              <button id="todoAdd">+</button>
+            <div class="studying-now" id="studyingNow" title="Active study sessions right now">
+              <span class="studying-dot"></span>
+              <span id="studyingCount">—</span> <span class="studying-label">studying now</span>
             </div>
-            <div class="todo-list-scroll" id="todoList"></div>
+            <button class="hub-fullscreen-btn pop-btn" id="hubFullscreenBtn" title="Toggle focus mode">
+              <span class="hub-fs-icon">⛶</span><span class="hub-fs-label">focus</span>
+            </button>
           </div>
 
-          <!-- Pomodoro Card Inject -->
+          <!-- Pomodoro Card -->
           <div class="pomodoro-card" id="pomodoroCard">
             <div class="pomo-header-flex">
               <div class="pomo-tabs">
-                <button class="pomo-tab active" data-mode="pomodoro">pomodoro</button>
-                <button class="pomo-tab" data-mode="shortBreak">short break</button>
-                <button class="pomo-tab" data-mode="longBreak">long break</button>
+                <button class="pomo-tab pop-btn active" data-mode="pomodoro">pomodoro</button>
+                <button class="pomo-tab pop-btn" data-mode="shortBreak">short break</button>
+                <button class="pomo-tab pop-btn" data-mode="longBreak">long break</button>
               </div>
-              <button class="pomo-settings-btn" id="pomoSettingsBtn">⚙</button>
+              <button class="pomo-settings-btn pop-btn" id="pomoSettingsBtn" title="Settings">⚙</button>
             </div>
-            
+
             <div class="pomo-settings-menu" id="pomoSettingsMenu">
               <div class="setting-row">
                 <span>ticking sound</span>
@@ -84,37 +85,49 @@
                 <span>break bell</span>
                 <input type="checkbox" id="settingBell" checked>
               </div>
+              <div class="setting-row">
+                <span>auto-advance</span>
+                <input type="checkbox" id="settingAutoAdvance" checked>
+              </div>
+              <div class="setting-row setting-rename-row">
+                <span>timer name</span>
+                <input type="text" id="pomoNameInput" placeholder="focus" maxlength="20">
+              </div>
             </div>
 
             <div class="pomo-circle-wrap">
-              <svg class="pomo-svg" viewBox="0 0 120 120" style="overflow:visible">
+              <svg class="pomo-svg" viewBox="0 0 120 120">
                 <circle class="pomo-bg" cx="60" cy="60" r="54"></circle>
                 <circle class="pomo-progress" cx="60" cy="60" r="54" id="pomoProgress" stroke-dasharray="339.292" stroke-dashoffset="0"></circle>
-                
-                <g id="pomoTip" class="pomo-tip-logo">
-                  <path d="M0 -8 L1.6 -1.6 L8 0 L1.6 1.6 L0 8 L-1.6 1.6 L-8 0 L-1.6 -1.6 Z" fill="#262630" stroke="var(--accent)" stroke-width="1.2"/>
-                </g>
               </svg>
               <div class="pomo-time" id="pomoTime">25:00</div>
+              <div class="pomo-name-display" id="pomoNameDisplay">focus</div>
             </div>
             <div class="pomo-controls">
-              <button class="pomo-btn" id="pomoToggle">▶</button>
-              <button class="pomo-btn pomo-reset" id="pomoReset">↻</button>
+              <button class="pomo-btn pop-btn" id="pomoToggle">▶</button>
+              <button class="pomo-btn pop-btn pomo-reset" id="pomoReset">↻</button>
             </div>
-            
+
             <div class="pomo-footer">
               <div class="pomo-cycles-wrap" id="pomoCyclesWrap">
                 <span class="pomo-cycle-label">cycle: <strong id="pomoCycle">1</strong></span>
-                <svg class="pomo-tomato cycle-1" viewBox="0 0 24 24"><path d="M12 2v4M10 4s2-2 4 0"/><circle cx="12" cy="14" r="8"/></svg>
-                <svg class="pomo-tomato cycle-2" viewBox="0 0 24 24"><path d="M12 2v4M10 4s2-2 4 0"/><circle cx="12" cy="14" r="8"/></svg>
-                <svg class="pomo-tomato cycle-3" viewBox="0 0 24 24"><path d="M12 2v4M10 4s2-2 4 0"/><circle cx="12" cy="14" r="8"/></svg>
-                <svg class="pomo-tomato cycle-4" viewBox="0 0 24 24"><path d="M12 2v4M10 4s2-2 4 0"/><circle cx="12" cy="14" r="8"/></svg>
-              </div>
-              <div class="studying-now" id="studyingNow">
-                <span class="studying-dot"></span>
-                <span id="studyingCount">—</span> studying now
+                <span class="pomo-tomato cycle-1" data-cycle="1" title="cycle 1"></span>
+                <span class="pomo-tomato cycle-2" data-cycle="2" title="cycle 2"></span>
+                <span class="pomo-tomato cycle-3" data-cycle="3" title="cycle 3"></span>
+                <span class="pomo-tomato cycle-4" data-cycle="4" title="cycle 4"></span>
               </div>
             </div>
+          </div>
+
+          <!-- Todo List -->
+          <div class="todo-card" id="todoCard">
+            <div class="todo-header">tasks</div>
+            <div class="todo-input-wrap">
+              <input type="color" id="todoColor" value="#e07878" title="Subject Color">
+              <input type="text" id="todoInput" placeholder="add subject..." autocomplete="off">
+              <button id="todoAdd" class="pop-btn">+</button>
+            </div>
+            <div class="todo-list-scroll" id="todoList"></div>
           </div>
         </div>
 
@@ -128,13 +141,6 @@
               <span class="host" id="term-host">0bsidian-bit</span>
               <span class="badge" id="term-badge">~ · zsh</span>
             </div>
-            <select id="modelPicker" class="model-picker">
-              <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast" selected>llama 3.3 70b</option>
-              <option value="@cf/meta/llama-4-scout-17b-16e-instruct">llama 4 scout</option>
-              <option value="@cf/google/gemma-4-26b-a4b-it">gemma 4 26b</option>
-              <option value="@cf/qwen/qwen3-30b-a3b-fp8">qwen3 30b</option>
-            </select>
-            <button class="terminal-fullscreen-btn" id="termFullscreenBtn" title="Fullscreen">⛶</button>
           </div>
           <div class="terminal-body" id="body">
             <div id="output"></div>
@@ -151,16 +157,16 @@
       </div>
     </div>
 
-    <div class="tailscale-overlay" id="tailscaleOverlay" aria-hidden="true" aria-modal="true" role="dialog">
+    <div class="tailscale-overlay overlay" id="tailscaleOverlay" aria-hidden="true" aria-modal="true" role="dialog">
       <div class="contact-panel">
         <p class="contact-title">private portal</p>
-        <p style="font-family: var(--font-mono); font-size: 13px; color: var(--term-fg); margin-bottom: 24px; line-height: 1.6;">
+        <p class="overlay-body-text">
           Are you connected to Tailscale?<br>
           This is a private server route.
         </p>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <div class="overlay-actions">
           <button class="contact-submit" id="tsCancel">cancel</button>
-          <button class="contact-submit" id="tsConfirm" style="color: var(--accent); border-color: var(--accent);">proceed →</button>
+          <button class="contact-submit contact-submit-primary" id="tsConfirm">proceed →</button>
         </div>
       </div>
     </div>
@@ -175,8 +181,62 @@
       </div>
     </div>
 
+    <div class="contact-overlay overlay" id="contactOverlay" aria-hidden="true" aria-modal="true" role="dialog">
+      <div class="contact-panel contact-panel-form">
+        <p class="contact-title">get in touch</p>
+        <form id="contactForm" class="contact-form" autocomplete="off">
+          <label class="contact-label">
+            <span>name</span>
+            <input type="text" id="contactName" maxlength="80" required>
+          </label>
+          <label class="contact-label">
+            <span>your email (optional)</span>
+            <input type="email" id="contactEmail" maxlength="120">
+          </label>
+          <label class="contact-label">
+            <span>subject</span>
+            <input type="text" id="contactSubject" maxlength="120" value="Hello from 0bsidian">
+          </label>
+          <label class="contact-label">
+            <span>message</span>
+            <textarea id="contactMessage" rows="5" maxlength="2000" required></textarea>
+          </label>
+          <p class="contact-note">
+            Opens your email app with the message pre-filled. No servers involved — your message never touches this site.
+            If your email app doesn't open, copy: <button type="button" id="copyEmailBtn" class="copy-email-btn">copy address</button>
+          </p>
+          <div class="overlay-actions">
+            <button type="button" class="contact-submit" id="contactCancel">cancel</button>
+            <button type="submit" class="contact-submit contact-submit-primary">send →</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="privacy-overlay overlay" id="privacyOverlay" aria-hidden="true" aria-modal="true" role="dialog">
+      <div class="contact-panel">
+        <p class="contact-title">privacy</p>
+        <div class="privacy-body">
+          <p><strong>0bsidian stores nothing about you on our servers.</strong></p>
+          <p>Tasks, timers, chat history, and buddy choice live only in your browser's <code>localStorage</code>. Clearing site data wipes everything.</p>
+          <p>Chat requests go to Cloudflare Workers AI over HTTPS and are not logged by us. Ephemeral KV entries (rate-limit buckets keyed by IP, a 90-second "studying now" heartbeat, and a 30-minute Turnstile verification flag) expire on their own. No PII, no analytics, no trackers, no cookies beyond what Turnstile requires for bot prevention.</p>
+          <p>Source code is public on GitHub — audit it yourself.</p>
+        </div>
+        <div class="overlay-actions">
+          <button class="contact-submit contact-submit-primary" id="privacyClose">close</button>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">
-      Dr. Lokesh Tewari <span>·</span> india <span>·</span> <span id="footerYear"></span>
+      <a href="#" id="footerContactLink" class="footer-contact">Dr. Lokesh Tewari</a>
+      <span>·</span> india <span>·</span>
+      <span id="footerYear"></span>
+      <span>·</span>
+      <a href="#" id="footerPrivacyLink" class="footer-link">privacy</a>
+    </div>
+    <div class="privacy-footer" id="privacyFooter">
+      privacy-first. no analytics, no trackers. tasks and chats live only in your browser.
     </div>
   </div>
 
@@ -184,5 +244,7 @@
     <div class="speech-bubble" id="companionSpeech"></div>
     <div class="companion-art" id="companionArt"></div>
   </div>
+
+  <button class="install-hint pop-btn" id="installHint" hidden>install app</button>
 </body>
 </html>
