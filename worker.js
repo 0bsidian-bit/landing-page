@@ -10,6 +10,7 @@ const CONFIG = {
   MAX_BODY_BYTES: 16384,
   MAX_HISTORY_TURNS: 10,
   AI_MODEL: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  AI_MODEL: "@@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   ALLOWED_ORIGIN: "https://lokeshtewari.uk"
 };
 
@@ -110,6 +111,13 @@ class HttpUtils {
   }
 }
 
+async function runAI(env, messages, maxTokens = 512) {
+  try {
+    return await env.AI.run(CONFIG.AI_MODEL, { messages, max_tokens: maxTokens, temperature: 0.3 });
+  } catch (err) {
+    return await env.AI.run(CONFIG.AI_MODEL_FALLBACK, { messages, max_tokens: maxTokens, temperature: 0.3 });
+  }
+}
 
 class ApiController {
 
@@ -185,6 +193,12 @@ class ApiController {
       const aiText = result?.response || result?.result?.response || "";
       if (!aiText) return HttpUtils.jsonResponse({ error: "Empty AI response" }, 500, corsHeaders);
       return HttpUtils.jsonResponse({ response: aiText }, 200, corsHeaders);
+      const response = await runAI(env, [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...sanitizedMessages,
+      ]);
+
+      return HttpUtils.jsonResponse({ response: response.response }, 200, corsHeaders);
     } catch (err) {
       if (err.message === "Payload Too Large") return HttpUtils.jsonResponse({ error: "Request too large" }, 413, corsHeaders);
       return HttpUtils.jsonResponse({ error: "AI unavailable" }, 503, corsHeaders);
@@ -224,6 +238,9 @@ class ApiController {
       return HttpUtils.jsonResponse({ response: text || "..." }, 200, corsHeaders);
     } catch {
       return HttpUtils.jsonResponse({ error: "Failed" }, 503, corsHeaders);
+      return HttpUtils.jsonResponse({ response: response.response }, 200, corsHeaders);
+    } catch {
+      return HttpUtils.jsonResponse({ error: "Failed" }, 400, corsHeaders);
     }
   }
 
