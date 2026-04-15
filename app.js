@@ -1,15 +1,14 @@
 /**
  * 0bsidian Terminal Application
- * Clean, Object-Oriented Frontend Architecture
  */
 
 const CONFIG = {
-  themeKey: 'lt-theme',
   aiHistoryKey: 'lt-ai-history',
   subtitleText: 'notes from a working physician',
   typingSpeedMs: 55,
   botName: '0bsidian',
-  botModel: 'Llama 3.3 70B fp8'
+  contactEmail: 'contact@lokeshtewari.uk',
+  portalUrl: 'https://start.lokeshtewari.uk'
 };
 
 function siteConfirm(message) {
@@ -19,10 +18,10 @@ function siteConfirm(message) {
     const yesBtn = document.getElementById('confirmYes');
     const cancelBtn = document.getElementById('confirmCancel');
     if (!overlay || !msg) { resolve(confirm(message)); return; }
-    
+
     msg.textContent = message;
     overlay.classList.add('open');
-    
+
     const cleanup = (result) => {
       overlay.classList.remove('open');
       yesBtn.removeEventListener('click', onYes);
@@ -30,26 +29,18 @@ function siteConfirm(message) {
       document.removeEventListener('keydown', onKey);
       resolve(result);
     };
-    
+
     const onYes = () => cleanup(true);
     const onCancel = () => cleanup(false);
     const onKey = (e) => {
       if (e.key === 'Escape') cleanup(false);
       if (e.key === 'Enter') cleanup(true);
     };
-    
+
     yesBtn.addEventListener('click', onYes);
     cancelBtn.addEventListener('click', onCancel);
     document.addEventListener('keydown', onKey);
   });
-}
-
-class ThemeManager {
-  constructor() {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    this.currentTheme = 'dark';
-  }
-  toggleTheme() { return 'dark'; }
 }
 
 class DOMUtils {
@@ -57,13 +48,9 @@ class DOMUtils {
     const frag = document.createDocumentFragment();
     const re = /\*\*(.+?)\*\*|\*(.+?)\*/g;
     let last = 0, m;
-    
+
     while ((m = re.exec(text)) !== null) {
-      // Append text before match
-      if (m.index > last) {
-        frag.appendChild(document.createTextNode(text.slice(last, m.index)));
-      }
-      // Handling bold / italic
+      if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
       if (m[1] !== undefined) {
         const strong = document.createElement('strong');
         strong.textContent = m[1];
@@ -75,12 +62,7 @@ class DOMUtils {
       }
       last = m.index + m[0].length;
     }
-    
-    // Append remaining text
-    if (last < text.length) {
-      frag.appendChild(document.createTextNode(text.slice(last)));
-    }
-    
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
     return frag;
   }
 }
@@ -97,61 +79,38 @@ class ChatClient {
       const saved = localStorage.getItem(CONFIG.aiHistoryKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.conversation = parsed;
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) this.conversation = parsed;
       }
-    } catch { /* no-op */ }
+    } catch {}
   }
 
   saveHistory() {
-    try {
-      localStorage.setItem(CONFIG.aiHistoryKey, JSON.stringify(this.conversation));
-    } catch { /* no-op */ }
+    try { localStorage.setItem(CONFIG.aiHistoryKey, JSON.stringify(this.conversation)); } catch {}
   }
 
   clearMemory() {
     this.conversation = [];
-    try {
-      localStorage.removeItem(CONFIG.aiHistoryKey);
-    } catch { /* no-op */ }
+    try { localStorage.removeItem(CONFIG.aiHistoryKey); } catch {}
   }
 
-  pushUserMessage(content) {
-    this.conversation.push({ role: 'user', content });
-  }
-
-  pushAssistantMessage(content) {
-    this.conversation.push({ role: 'assistant', content });
-    this.saveHistory();
-  }
-
-  popLastMessage() {
-    this.conversation.pop();
-  }
-  
-  getTurns() {
-    return Math.floor(this.conversation.length / 2);
-  }
+  pushUserMessage(content) { this.conversation.push({ role: 'user', content }); }
+  pushAssistantMessage(content) { this.conversation.push({ role: 'assistant', content }); this.saveHistory(); }
+  popLastMessage() { this.conversation.pop(); }
+  getTurns() { return Math.floor(this.conversation.length / 2); }
 
   async ask() {
     this.isLoading = true;
-    const modelPicker = document.getElementById('modelPicker');
-    const model = modelPicker ? modelPicker.value : null;
-
     try {
       const token = window.appInstance?.turnstileToken;
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: this.conversation, model, turnstileToken: token })
+        body: JSON.stringify({ messages: this.conversation, turnstileToken: token })
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Server error');
       }
-
       const data = await res.json();
       if (!data.response) throw new Error('Empty response');
       return data.response;
@@ -173,12 +132,10 @@ class TerminalUI {
       badge: document.getElementById('term-badge'),
       prompt: document.getElementById('term-prompt')
     };
-    
     this.history = [];
     this.historyIndex = -1;
     this.commands = this.getCommandRegistry();
     this.commandList = [...Object.keys(this.commands).map(c => '/' + c), '/forget', '/clear'];
-    
     this.initEvents();
   }
 
@@ -188,7 +145,9 @@ class TerminalUI {
             `/about       who this is\n` +
             `/now         current focus\n` +
             `/github      code & projects\n` +
+            `/model       current AI model\n` +
             `/version     build info\n` +
+            `/privacy     privacy details\n` +
             `/forget      clear ai memory\n` +
             `/clear       clear the screen\n\n` +
             `type any command and press enter.\nanything not starting with '/' is sent to 0bsidian AI.`,
@@ -197,10 +156,12 @@ class TerminalUI {
       github: `github.com/0bsidian-bit\n\nprojects, dotfiles, and occasional proofs of concept.\nopen to collaboration — send a message first.`,
       whoami: '0bsidian-bit. a working physician. and you?',
       sudo: 'permission denied. nice try.',
+      model: 'gpt-oss-120b  ·  cloudflare workers ai',
+      privacy: `your browser only. tasks, timers, chat history → localStorage.\nno analytics, no trackers, no cookies beyond turnstile.\nkv entries are ephemeral: rate-limit (60s), studying heartbeat (90s), turnstile verify (30m).\nsource: github.com/0bsidian-bit`,
       version: () => {
         const now = new Date();
         const month = now.toLocaleString('en-us', { month: 'long' }).toLowerCase();
-        return `lokeshtewari.uk  v1.0.0\nbuilt      ${month} ${now.getFullYear()}\nruntime    cloudflare pages + workers\nmodel      llama 3.3 70b fp8`;
+        return `lokeshtewari.uk  v1.1.0\nbuilt      ${month} ${now.getFullYear()}\nruntime    cloudflare workers`;
       }
     };
   }
@@ -208,7 +169,6 @@ class TerminalUI {
   initEvents() {
     if (!this.elements.input) return;
 
-    // Prevent rich text pasting
     this.elements.input.addEventListener('paste', e => {
       e.preventDefault();
       const text = e.clipboardData?.getData('text/plain') || '';
@@ -217,7 +177,6 @@ class TerminalUI {
 
     this.elements.input.addEventListener('keydown', e => this.handleKeydown(e));
 
-    // Focus input when clicking anywhere in terminal
     this.elements.terminal?.addEventListener('click', e => {
       if (e.target.tagName !== 'BUTTON') {
         const sel = window.getSelection();
@@ -226,34 +185,23 @@ class TerminalUI {
     });
   }
 
-  setAppInstance(app) {
-    this.app = app;
-  }
+  setAppInstance(app) { this.app = app; }
 
   handleKeydown(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       const val = this.getInputValue().trim();
-      if (val) {
-        this.history.unshift(val);
-        this.historyIndex = -1;
-      }
+      if (val) { this.history.unshift(val); this.historyIndex = -1; }
       this.app.routeInput(val);
       this.clearInput();
       this.scrollDown();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      if (this.historyIndex < this.history.length - 1) {
-        this.setInputValue(this.history[++this.historyIndex]);
-      }
+      if (this.historyIndex < this.history.length - 1) this.setInputValue(this.history[++this.historyIndex]);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (this.historyIndex > 0) {
-        this.setInputValue(this.history[--this.historyIndex]);
-      } else {
-        this.historyIndex = -1;
-        this.clearInput();
-      }
+      if (this.historyIndex > 0) this.setInputValue(this.history[--this.historyIndex]);
+      else { this.historyIndex = -1; this.clearInput(); }
     } else if (e.key === 'Tab') {
       e.preventDefault();
       const completed = this.autocomplete(this.getInputValue().trim());
@@ -268,17 +216,11 @@ class TerminalUI {
     if (!partial.startsWith('/')) return null;
     const matches = this.commandList.filter(c => c.startsWith(partial));
     if (matches.length === 1) return matches[0];
-    if (matches.length > 1) {
-      this.printLine(matches.join('   '), 'dim');
-      this.scrollDown();
-    }
+    if (matches.length > 1) { this.printLine(matches.join('   '), 'dim'); this.scrollDown(); }
     return null;
   }
 
-  getInputValue() {
-    return this.elements.input.textContent || '';
-  }
-
+  getInputValue() { return this.elements.input.textContent || ''; }
   setInputValue(text) {
     this.elements.input.textContent = text;
     const range = document.createRange();
@@ -288,32 +230,19 @@ class TerminalUI {
     sel.removeAllRanges();
     sel.addRange(range);
   }
-
-  clearInput() {
-    this.elements.input.textContent = '';
-  }
-
+  clearInput() { this.elements.input.textContent = ''; }
   clearTerminal() {
-    if (this.elements.output.replaceChildren) {
-      this.elements.output.replaceChildren();
-    } else {
-      this.elements.output.textContent = '';
-    }
+    if (this.elements.output.replaceChildren) this.elements.output.replaceChildren();
+    else this.elements.output.textContent = '';
   }
-
-  scrollDown() {
-    this.elements.body.scrollTop = this.elements.body.scrollHeight;
-  }
+  scrollDown() { this.elements.body.scrollTop = this.elements.body.scrollHeight; }
 
   printLine(text, cls = '', markdown = false) {
     text.split('\n').forEach(line => {
       const div = document.createElement('div');
       div.className = 'line' + (cls ? ' ' + cls : '');
-      if (markdown && line) {
-        div.appendChild(DOMUtils.parseMarkdown(line));
-      } else {
-        div.textContent = line || '\u00A0';
-      }
+      if (markdown && line) div.appendChild(DOMUtils.parseMarkdown(line));
+      else div.textContent = line || '\u00A0';
       this.elements.output.appendChild(div);
     });
   }
@@ -342,33 +271,18 @@ class TerminalUI {
     this.elements.output.appendChild(div);
   }
 
-  lockInput() {
-    this.elements.input.contentEditable = 'false';
-  }
-
-  unlockInput() {
-    this.elements.input.contentEditable = 'true';
-    this.elements.input.focus();
-  }
+  lockInput() { this.elements.input.contentEditable = 'false'; }
+  unlockInput() { this.elements.input.contentEditable = 'true'; this.elements.input.focus(); }
 
   createSpinner() {
     const thinkDiv = document.createElement('div');
     thinkDiv.className = 'line ai-thinking';
     this.elements.output.appendChild(thinkDiv);
     this.scrollDown();
-
     const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let fi = 0;
-    const interval = setInterval(() => {
-      thinkDiv.textContent = frames[fi++ % frames.length] + ' thinking';
-    }, 80);
-
-    return {
-      remove: () => {
-        clearInterval(interval);
-        thinkDiv.remove();
-      }
-    };
+    const interval = setInterval(() => { thinkDiv.textContent = frames[fi++ % frames.length] + ' thinking'; }, 80);
+    return { remove: () => { clearInterval(interval); thinkDiv.remove(); } };
   }
 
   printUserAIMessage(query) {
@@ -392,7 +306,7 @@ class TerminalUI {
     this.elements.output.appendChild(labelDiv);
     this.printLine(response, 'ai-response', true);
   }
-  
+
   pauseCaret() {
     this.elements.caret.classList.add('paused');
     setTimeout(() => this.elements.caret.classList.remove('paused'), 2000);
@@ -400,9 +314,7 @@ class TerminalUI {
 }
 
 class PomoAudio {
-  constructor() {
-    this.ctx = null;
-  }
+  constructor() { this.ctx = null; }
   init() {
     if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -433,31 +345,39 @@ class PomoAudio {
   }
 }
 
+const POMO_STATE_KEY = '0bsidian_pomo_state_v1';
+const POMO_STATS_KEY = '0bsidian_pomo_stats';
+const POMO_NAMES_KEY = '0bsidian_pomo_names_v1';
+const POMO_CIRCUMFERENCE = 339.292;
+
 class PomodoroTimer {
   constructor() {
-    this.modes = {
-      pomodoro: 25 * 60,
-      shortBreak: 5 * 60,
-      longBreak: 15 * 60
-    };
+    this.modes = { pomodoro: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
     this.currentMode = 'pomodoro';
     this.timeLeft = this.modes.pomodoro;
     this.isRunning = false;
     this.timerId = null;
-    
-    // Load stats
-    let stats = { cycles: 0 };
-    try { stats = JSON.parse(localStorage.getItem('0bsidian_pomo_stats')) || stats; } catch {}
-    this.cycle = stats.cycles + 1;
+    this.endsAt = null;
     this.baseTitle = document.title;
-    
+
+    let stats = { cycles: 0 };
+    try { stats = JSON.parse(localStorage.getItem(POMO_STATS_KEY)) || stats; } catch {}
+    this.cycle = stats.cycles + 1;
+
+    this.names = { pomodoro: 'focus', shortBreak: 'short', longBreak: 'long' };
+    try {
+      const saved = JSON.parse(localStorage.getItem(POMO_NAMES_KEY));
+      if (saved && typeof saved === 'object') this.names = { ...this.names, ...saved };
+    } catch {}
+
     this.audio = new PomoAudio();
-    
+
     this.elements = {
       tabs: document.querySelectorAll('.pomo-tab'),
       time: document.getElementById('pomoTime'),
       progress: document.getElementById('pomoProgress'),
-      tip: document.getElementById('pomoTip'),
+      nameDisplay: document.getElementById('pomoNameDisplay'),
+      nameInput: document.getElementById('pomoNameInput'),
       toggleBtn: document.getElementById('pomoToggle'),
       resetBtn: document.getElementById('pomoReset'),
       cycleInfo: document.getElementById('pomoCycle'),
@@ -466,25 +386,20 @@ class PomodoroTimer {
       settingsMenu: document.getElementById('pomoSettingsMenu'),
       settingTick: document.getElementById('settingTick'),
       settingBell: document.getElementById('settingBell'),
+      settingAutoAdvance: document.getElementById('settingAutoAdvance'),
       fullscreenBtn: document.getElementById('hubFullscreenBtn'),
-      hub: document.getElementById('prodHub')
+      hub: document.getElementById('prodHub'),
+      dashboard: document.getElementById('dashboardLayout')
     };
 
-    if (this.elements.cycleInfo) {
-      this.elements.cycleInfo.textContent = this.cycle;
-    }
+    if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.cycle;
     this.updateCycleDots();
 
     this.initEvents();
+    this.hydrateFromStorage();
+    this.updateModeVisuals();
     this.updateDisplay();
-  }
-
-  updateCycleDots() {
-    this.elements.tomatoes.forEach((t, i) => {
-      const activeIdx = (this.cycle - 1) % 4;
-      if (i <= activeIdx) t.classList.add('active');
-      else t.classList.remove('active');
-    });
+    this.updateName();
   }
 
   initEvents() {
@@ -503,71 +418,106 @@ class PomodoroTimer {
       }
       this.reset();
     });
-    this.elements.settingsBtn?.addEventListener('click', () => {
-      this.elements.settingsMenu?.classList.toggle('open');
+    this.elements.settingsBtn?.addEventListener('click', () => this.elements.settingsMenu?.classList.toggle('open'));
+
+    this.elements.nameInput?.addEventListener('input', (e) => {
+      const v = (e.target.value || '').trim().slice(0, 20);
+      this.names[this.currentMode] = v || this.defaultName(this.currentMode);
+      try { localStorage.setItem(POMO_NAMES_KEY, JSON.stringify(this.names)); } catch {}
+      this.updateName();
+      this.updateCycleTitles();
     });
-    this.elements.fullscreenBtn?.addEventListener('click', () => {
-      const hub = this.elements.hub;
-      if (!hub) return;
-      
-      if (!document.fullscreenElement) {
-        hub.requestFullscreen().then(() => {
-          hub.classList.add('fullscreen');
-          this.elements.fullscreenBtn.textContent = "[✕] exit full";
-        }).catch(() => {
-          // Fallback to CSS-only if API is blocked
-          hub.classList.add('fullscreen');
-          this.elements.fullscreenBtn.textContent = "[✕] exit full";
-        });
-      } else {
-        document.exitFullscreen().then(() => {
-          hub.classList.remove('fullscreen');
-          this.elements.fullscreenBtn.textContent = "[⛶] fullscreen";
-        }).catch(() => {
-          hub.classList.remove('fullscreen');
-          this.elements.fullscreenBtn.textContent = "[⛶] fullscreen";
-        });
-      }
-    });
-    
-    // Handle exiting fullscreen via Escape key
+
+    this.elements.fullscreenBtn?.addEventListener('click', () => this.toggleFullscreen());
+
     document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && this.elements.hub?.classList.contains('fullscreen')) {
-        this.elements.hub.classList.remove('fullscreen');
-        this.elements.fullscreenBtn.textContent = "[⛶] fullscreen";
+      if (!document.fullscreenElement && this.elements.dashboard?.classList.contains('fullscreen')) {
+        this.elements.dashboard.classList.remove('fullscreen');
+        this.updateFullscreenLabel(false);
       }
+    });
+
+    document.querySelectorAll('.pomo-tomato').forEach(dot => {
+      dot.addEventListener('mouseenter', () => {
+        const c = Number(dot.dataset.cycle);
+        dot.title = `cycle ${c} · ${this.names.pomodoro || 'focus'}`;
+      });
     });
   }
 
-  setMode(mode) {
+  toggleFullscreen() {
+    const layout = this.elements.dashboard;
+    if (!layout) return;
+    const isFs = layout.classList.contains('fullscreen');
+    if (!isFs) {
+      layout.classList.add('fullscreen');
+      this.updateFullscreenLabel(true);
+      layout.requestFullscreen?.().catch(() => {});
+    } else {
+      layout.classList.remove('fullscreen');
+      this.updateFullscreenLabel(false);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  updateFullscreenLabel(fs) {
+    const btn = this.elements.fullscreenBtn;
+    if (!btn) return;
+    btn.querySelector('.hub-fs-icon').textContent = fs ? '✕' : '⛶';
+    btn.querySelector('.hub-fs-label').textContent = fs ? 'exit' : 'focus';
+  }
+
+  defaultName(mode) {
+    return mode === 'pomodoro' ? 'focus' : mode === 'shortBreak' ? 'short' : 'long';
+  }
+
+  updateName() {
+    const name = this.names[this.currentMode] || this.defaultName(this.currentMode);
+    if (this.elements.nameDisplay) this.elements.nameDisplay.textContent = name;
+    if (this.elements.nameInput && this.elements.nameInput.value !== name) this.elements.nameInput.value = name;
+  }
+
+  updateCycleTitles() {
+    const name = this.names.pomodoro || 'focus';
+    document.querySelectorAll('.pomo-tomato').forEach(dot => {
+      const c = Number(dot.dataset.cycle);
+      dot.title = `cycle ${c} · ${name}`;
+    });
+  }
+
+  updateCycleDots() {
+    this.elements.tomatoes.forEach((t, i) => {
+      const activeIdx = ((this.cycle - 1) % 4);
+      if (i <= activeIdx) t.classList.add('active');
+      else t.classList.remove('active');
+    });
+  }
+
+  setMode(mode, { autoStart = false, silent = false } = {}) {
     if (!this.modes[mode]) return;
+    this.pause();
     this.currentMode = mode;
     this.timeLeft = this.modes[mode];
-    this.pause();
-    
+
     this.elements.tabs.forEach(t => t.classList.remove('active'));
     document.querySelector(`.pomo-tab[data-mode="${mode}"]`)?.classList.add('active');
-    
-    // Visual mode: breaks get a warm teal ring + matching tip
-    if (this.elements.progress) {
-      if (mode === 'pomodoro') {
-        this.elements.progress.style.stroke = '';
-        // Reset tip to default (dark fill + purple stroke)
-        const tipPath = this.elements.tip?.querySelector('path');
-        if (tipPath) { tipPath.setAttribute('stroke', 'var(--accent)'); tipPath.setAttribute('fill', '#262630'); }
-      } else {
-        this.elements.progress.style.stroke = '#5eead4';
-        // Tip: dark fill + teal stroke for contrast against teal ring
-        const tipPath = this.elements.tip?.querySelector('path');
-        if (tipPath) { tipPath.setAttribute('stroke', '#5eead4'); tipPath.setAttribute('fill', '#262630'); }
-      }
-    }
-    
+
+    this.updateModeVisuals();
     this.updateDisplay();
+    this.updateName();
+    this.saveState();
+
+    if (autoStart && !silent) this.start();
+  }
+
+  updateModeVisuals() {
+    if (!this.elements.progress) return;
+    if (this.currentMode === 'pomodoro') this.elements.progress.style.stroke = '';
+    else this.elements.progress.style.stroke = '#5eead4';
   }
 
   async toggle() {
-    this.audio.init(); // enable audio context on user gesture
+    this.audio.init();
     if (this.isRunning) {
       if (!(await siteConfirm('Pause the timer?'))) return;
       this.pause();
@@ -579,52 +529,64 @@ class PomodoroTimer {
   start() {
     if (this.isRunning || this.timeLeft <= 0) return;
     this.isRunning = true;
+    this.endsAt = Date.now() + this.timeLeft * 1000;
     this.elements.toggleBtn.textContent = '⏸';
     this.timerId = setInterval(() => this.tick(), 1000);
-    if (window.appInstance && window.appInstance.companion) window.appInstance.companion.setWorkingState(true);
+    this.saveState();
+    if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(this.currentMode === 'pomodoro');
   }
 
   pause() {
+    if (this.isRunning && this.endsAt) {
+      this.timeLeft = Math.max(0, Math.ceil((this.endsAt - Date.now()) / 1000));
+    }
     this.isRunning = false;
-    this.elements.toggleBtn.textContent = '▶';
+    this.endsAt = null;
+    if (this.elements.toggleBtn) this.elements.toggleBtn.textContent = '▶';
     clearInterval(this.timerId);
     document.title = this.baseTitle;
-    if (window.appInstance && window.appInstance.companion) window.appInstance.companion.setWorkingState(false);
+    this.saveState();
+    if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(false);
   }
 
   reset() {
     this.pause();
     this.timeLeft = this.modes[this.currentMode];
     this.updateDisplay();
+    this.saveState();
   }
 
   tick() {
-    this.timeLeft--;
+    this.timeLeft = Math.max(0, Math.ceil((this.endsAt - Date.now()) / 1000));
     this.updateDisplay();
-    
-    if (this.elements.settingTick?.checked) {
-      this.audio.playTick();
-    }
-    
+    if (this.elements.settingTick?.checked) this.audio.playTick();
+
     if (this.timeLeft <= 0) {
-      this.pause();
-      if (this.elements.settingBell?.checked) {
-        this.audio.playBell();
-      }
-      if (this.currentMode === 'pomodoro') {
-        let stats = { cycles: 0 };
-        try { stats = JSON.parse(localStorage.getItem('0bsidian_pomo_stats')) || stats; } catch {}
-        stats.cycles++;
-        localStorage.setItem('0bsidian_pomo_stats', JSON.stringify(stats));
-        
-        this.cycle = stats.cycles + 1;
-        if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.cycle;
-        this.updateCycleDots();
-        
-        this.setMode(this.cycle % 4 === 0 ? 'longBreak' : 'shortBreak');
-      } else {
-        this.setMode('pomodoro');
-      }
+      this.onComplete();
+    } else {
+      if (this.timeLeft % 5 === 0) this.saveState();
+    }
+  }
+
+  onComplete() {
+    this.pause();
+    if (this.elements.settingBell?.checked) this.audio.playBell();
+
+    const autoAdvance = this.elements.settingAutoAdvance?.checked !== false;
+
+    if (this.currentMode === 'pomodoro') {
+      let stats = { cycles: 0 };
+      try { stats = JSON.parse(localStorage.getItem(POMO_STATS_KEY)) || stats; } catch {}
+      stats.cycles++;
+      localStorage.setItem(POMO_STATS_KEY, JSON.stringify(stats));
+      this.cycle = stats.cycles + 1;
+      if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.cycle;
+      this.updateCycleDots();
+
+      const nextMode = ((this.cycle - 1) % 4 === 0) ? 'longBreak' : 'shortBreak';
+      this.setMode(nextMode, { autoStart: autoAdvance });
+    } else {
+      this.setMode('pomodoro', { autoStart: autoAdvance });
     }
   }
 
@@ -632,37 +594,58 @@ class PomodoroTimer {
     const mins = Math.floor(this.timeLeft / 60);
     const secs = this.timeLeft % 60;
     const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    
     if (this.elements.time) this.elements.time.textContent = formatted;
-    
-    if (this.isRunning) {
-      document.title = `(${formatted}) ${this.baseTitle}`;
-    }
+
+    document.title = this.isRunning ? `(${formatted}) ${this.baseTitle}` : this.baseTitle;
 
     if (this.elements.progress) {
       const total = this.modes[this.currentMode];
-      const percent = this.timeLeft / total; // 1.0 → 0.0
-      
-      // Negative dashoffset = gap grows in the draw direction (clockwise after CSS -90deg rotation)
-      // This makes the ring drain CLOCKWISE from 12 o'clock
-      this.elements.progress.style.strokeDashoffset = -339.292 * (1 - percent);
-      
-      if (this.elements.tip) {
-        // The tip follows the leading edge of the draining ring.
-        // With negative dashoffset, the gap grows clockwise from 12 o'clock.
-        // In the rotated SVG (-90deg), angle=0 is at 12 o'clock visually.
-        // As time drains, the tip needs to move clockwise = negative angle direction.
-        const consumed = (1 - percent) * 2 * Math.PI;
-        const cx = 60, cy = 60, r = 54;
-        // Negative angle for clockwise movement in the CSS-rotated frame
-        const tx = cx + r * Math.cos(-consumed);
-        const ty = cy + r * Math.sin(-consumed);
-        const rotDeg = (1 - percent) * 720;
-        this.elements.tip.setAttribute('transform', `translate(${tx}, ${ty}) rotate(${rotDeg})`);
+      const percent = total > 0 ? this.timeLeft / total : 0;
+      this.elements.progress.style.strokeDashoffset = -POMO_CIRCUMFERENCE * (1 - percent);
+    }
+  }
+
+  saveState() {
+    try {
+      const payload = {
+        mode: this.currentMode,
+        timeLeft: this.timeLeft,
+        isRunning: this.isRunning,
+        endsAt: this.endsAt,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(POMO_STATE_KEY, JSON.stringify(payload));
+    } catch {}
+  }
+
+  hydrateFromStorage() {
+    let state = null;
+    try { state = JSON.parse(localStorage.getItem(POMO_STATE_KEY)); } catch {}
+    if (!state || !this.modes[state.mode]) return;
+
+    this.currentMode = state.mode;
+    this.elements.tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === this.currentMode));
+
+    if (state.isRunning && typeof state.endsAt === 'number') {
+      const remaining = Math.ceil((state.endsAt - Date.now()) / 1000);
+      if (remaining > 0) {
+        this.timeLeft = remaining;
+        this.endsAt = state.endsAt;
+        this.isRunning = true;
+        if (this.elements.toggleBtn) this.elements.toggleBtn.textContent = '⏸';
+        this.timerId = setInterval(() => this.tick(), 1000);
+        if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(this.currentMode === 'pomodoro');
+      } else {
+        this.timeLeft = 0;
+        this.onComplete();
       }
+    } else {
+      this.timeLeft = (typeof state.timeLeft === 'number' && state.timeLeft > 0) ? state.timeLeft : this.modes[this.currentMode];
     }
   }
 }
+
+const TODO_KEY = '0bsidian_todos_v2';
 
 class TodoManager {
   constructor() {
@@ -670,26 +653,10 @@ class TodoManager {
     this.input = document.getElementById('todoInput');
     this.color = document.getElementById('todoColor');
     this.addBtn = document.getElementById('todoAdd');
-    
-    // Data: [{ id, subject, color, tasks: [{id, text, done}] }]
+
     this.subjects = [];
-    try { this.subjects = JSON.parse(localStorage.getItem('0bsidian_todos_v2')) || []; } catch {}
-    
-    // Migrate old format if needed
-    let oldTodos = null;
-    try { oldTodos = JSON.parse(localStorage.getItem('0bsidian_todos')); } catch {}
-    if (oldTodos && oldTodos.length && !this.subjects.length) {
-      const grouped = {};
-      oldTodos.forEach(t => {
-        if (!grouped[t.subject]) grouped[t.subject] = { color: t.color, tasks: [] };
-        grouped[t.subject].tasks.push({ id: t.id, text: t.text, done: t.done });
-      });
-      for (const [subj, data] of Object.entries(grouped)) {
-        this.subjects.push({ id: Date.now() + Math.random(), subject: subj, color: data.color, tasks: data.tasks });
-      }
-      this.save();
-    }
-    
+    try { this.subjects = JSON.parse(localStorage.getItem(TODO_KEY)) || []; } catch {}
+
     this.initEvents();
     this.render();
   }
@@ -702,16 +669,9 @@ class TodoManager {
   }
 
   addSubject() {
-    let val = this.input.value.trim();
+    const val = this.input.value.trim();
     if (!val) return;
-    
-    this.subjects.push({
-      id: Date.now(),
-      subject: val,
-      color: this.color.value,
-      tasks: []
-    });
-    
+    this.subjects.push({ id: Date.now(), subject: val, color: this.color.value, tasks: [] });
     this.input.value = '';
     this.save();
     this.render();
@@ -746,22 +706,30 @@ class TodoManager {
     this.render();
   }
 
-  save() {
-    localStorage.setItem('0bsidian_todos_v2', JSON.stringify(this.subjects));
+  save() { localStorage.setItem(TODO_KEY, JSON.stringify(this.subjects)); }
+
+  topOpen(limit = 3) {
+    const out = [];
+    for (const s of this.subjects) {
+      for (const t of s.tasks) {
+        if (!t.done) out.push(`${s.subject}: ${t.text}`);
+        if (out.length >= limit) return out;
+      }
+    }
+    return out;
   }
 
   render() {
     if (!this.list) return;
     this.list.replaceChildren();
-    
+
     this.subjects.forEach(subj => {
       const groupDiv = document.createElement('div');
       groupDiv.className = 'todo-subject-group';
-      
-      // Subject header row
+
       const head = document.createElement('div');
       head.className = 'todo-subject-header';
-      
+
       const headLeft = document.createElement('div');
       headLeft.style.cssText = 'display:flex;align-items:center;gap:8px;flex:1;';
       const colorDot = document.createElement('span');
@@ -769,17 +737,15 @@ class TodoManager {
       colorDot.style.backgroundColor = subj.color;
       headLeft.appendChild(colorDot);
       headLeft.appendChild(document.createTextNode(' ' + subj.subject));
-      
+
       const addTaskBtn = document.createElement('button');
       addTaskBtn.className = 'todo-add-task-btn';
       addTaskBtn.textContent = '+';
       addTaskBtn.title = 'Add task';
       addTaskBtn.onclick = (e) => {
         e.stopPropagation();
-        // Toggle inline input
         const existing = groupDiv.querySelector('.todo-task-input-row');
         if (existing) { existing.remove(); return; }
-        
         const row = document.createElement('div');
         row.className = 'todo-task-input-row';
         const inp = document.createElement('input');
@@ -787,14 +753,10 @@ class TodoManager {
         inp.placeholder = 'add task...';
         inp.className = 'todo-task-inline-input';
         inp.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter' && inp.value.trim()) {
-            this.addTask(subj.id, inp.value);
-          }
+          if (ev.key === 'Enter' && inp.value.trim()) this.addTask(subj.id, inp.value);
           if (ev.key === 'Escape') row.remove();
         });
         row.appendChild(inp);
-        
-        // Insert after header
         head.after(row);
         inp.focus();
       };
@@ -808,175 +770,208 @@ class TodoManager {
       head.appendChild(addTaskBtn);
       head.appendChild(delSubjBtn);
       groupDiv.appendChild(head);
-      
-      // Tasks
+
       subj.tasks.forEach(t => {
         const item = document.createElement('div');
         item.className = `todo-item ${t.done ? 'done' : ''}`;
-        
+
         const cb = document.createElement('div');
         cb.className = 'todo-checkbox';
         cb.textContent = t.done ? '✓' : '';
         cb.onclick = () => this.toggleTask(subj.id, t.id);
-        
+
         const txt = document.createElement('div');
         txt.className = 'todo-text';
         txt.textContent = t.text;
-        
+
         const del = document.createElement('button');
         del.className = 'todo-delete';
         del.textContent = '×';
         del.onclick = (e) => { e.stopPropagation(); this.removeTask(subj.id, t.id); };
-        
+
         item.appendChild(cb);
         item.appendChild(txt);
         item.appendChild(del);
         groupDiv.appendChild(item);
       });
-      
+
       this.list.appendChild(groupDiv);
     });
   }
 }
 
+const BUDDY_KEY = '0bsidian_pet_id';
+
 class StudyCompanion {
-  constructor() {
+  constructor(todo) {
+    this.todo = todo;
     this.container = document.querySelector('.study-companion');
     this.artEl = document.getElementById('companionArt');
     this.speechEl = document.getElementById('companionSpeech');
     if (!this.artEl || !this.container) return;
-    
+
     this.buddies = [
-      { id: 1, name: 'Apollo', art: "  __\n<(o )___\n ( ._> /\n  `---'", trait: 'snark' },
-      { id: 2, name: 'Hermes', art: " .-. \n(o o)\n| O \\\n \\   \\\n  `~~~'", trait: 'chaos' },
-      { id: 3, name: 'Athena', art: " ,___,\n [O.o]\n /)__)\n  \" \"", trait: 'wisdom' },
-      { id: 4, name: 'Artemis', art: " /\\_/\\\n( o.o )\n > ^ <", trait: 'patience' },
-      { id: 5, name: 'Hephaestus', art: " [0_0]\n /| |\\\n  |_|", trait: 'debugging' },
-      { id: 6, name: 'Dionysus', art: "  ___\n (o o)\n(  _  )", trait: 'patience' },
-      { id: 7, name: 'Hestia', art: "  .----.\n /      \\\n(   @  @ )\n \\  --  /\n  `----'", trait: 'wisdom' },
-      { id: 8, name: 'Ares', art: "  /\\\n (  )\n  \\/", trait: 'chaos' },
-      { id: 9, name: 'Poseidon', art: "  ,-.\n (o o)\n /| |\\", trait: 'snark' },
-      { id: 10, name: 'Zeus', art: " ^...^\n<_* *_>\n  \\_/", trait: 'debugging'}
+      { id: 1, name: 'Apollo', art: "  __\n<(o )___\n ( ._> /\n  `---'", personality: 'clingy', effect: 'flash' },
+      { id: 2, name: 'Hermes', art: " .-. \n(o o)\n| O \\\n \\   \\\n  `~~~'", personality: 'chaotic', effect: 'blur-dash' },
+      { id: 3, name: 'Athena', art: " ,___,\n [O.o]\n /)__)\n  \" \"", personality: 'stoic', effect: 'fade' },
+      { id: 4, name: 'Artemis', art: " /\\_/\\\n( o.o )\n > ^ <", personality: 'shy', effect: 'shimmer' },
+      { id: 5, name: 'Hephaestus', art: " [0_0]\n /| |\\\n  |_|", personality: 'shy', effect: 'pixelate' },
+      { id: 6, name: 'Dionysus', art: "  ___\n (o o)\n(  _  )", personality: 'chaotic', effect: 'confetti-poof' },
+      { id: 7, name: 'Hestia', art: "  .----.\n /      \\\n(   @  @ )\n \\  --  /\n  `----'", personality: 'clingy', effect: 'ember' },
+      { id: 8, name: 'Ares', art: "  /\\\n (  )\n  \\/", personality: 'chaotic', effect: 'glitch' },
+      { id: 9, name: 'Poseidon', art: "  ,-.\n (o o)\n /| |\\", personality: 'stoic', effect: 'ripple' },
+      { id: 10, name: 'Zeus', art: " ^...^\n<_* *_>\n  \\_/", personality: 'stoic', effect: 'lightning' }
     ];
 
-    let saved = localStorage.getItem('0bsidian_pet_id');
+    let saved = localStorage.getItem(BUDDY_KEY);
     if (!saved) {
       saved = this.buddies[Math.floor(Math.random() * this.buddies.length)].id;
-      localStorage.setItem('0bsidian_pet_id', saved);
+      localStorage.setItem(BUDDY_KEY, saved);
     }
     this.buddy = this.buddies.find(b => b.id == saved) || this.buddies[0];
-    
+
     this.artEl.textContent = this.buddy.art;
     this.isWorking = false;
     this.thoughtTimer = null;
-    this.lastMessage = `Hi, I am ${this.buddy.name}.`;
-    
-    // Roaming state
-    this.roamTimer = null;
-    this.targetX = null;
-    this.targetY = null;
+    this.lastMessage = `${this.buddy.name} here. ${this.personalityIntro()}`;
+
+    this.side = Math.random() < 0.5 ? 'left' : 'right';
+    this.mouseX = window.innerWidth / 2;
+    this.mouseY = window.innerHeight / 2;
+    this.lastTeleportAt = 0;
+
+    this.positionOnEdge();
 
     this.artEl.addEventListener('click', () => {
       this.say(this.lastMessage);
+      this.teleport();
     });
-    
-    setTimeout(() => this.say(this.lastMessage), 1000);
-    
-    // Start gentle roaming — moves every 15-30 seconds
-    this.startRoaming();
+
+    window.addEventListener('resize', () => this.positionOnEdge());
+    window.addEventListener('mousemove', this.throttle((e) => {
+      this.mouseX = e.clientX;
+      this.mouseY = e.clientY;
+      this.reactToCursor();
+    }, 200));
+
+    setTimeout(() => this.say(this.lastMessage), 1500);
+    this.scheduleNextTeleport();
   }
 
-  startRoaming() {
-    const roam = () => {
-      this.moveToSafePosition();
-      // Random interval between 15-30 seconds
-      const next = 15000 + Math.random() * 15000;
-      this.roamTimer = setTimeout(roam, next);
+  personalityIntro() {
+    const p = this.buddy.personality;
+    if (p === 'clingy') return 'stay close, ok?';
+    if (p === 'shy') return '...hi.';
+    if (p === 'chaotic') return 'what trouble today?';
+    return 'ready when you are.';
+  }
+
+  throttle(fn, ms) {
+    let last = 0;
+    return (...args) => {
+      const now = Date.now();
+      if (now - last >= ms) { last = now; fn(...args); }
     };
-    this.roamTimer = setTimeout(roam, 10000); // First move after 10s
   }
 
-  moveToSafePosition() {
+  positionOnEdge() {
     if (!this.container) return;
-    
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const cw = this.container.offsetWidth || 80;
     const ch = this.container.offsetHeight || 100;
-    
-    // Define forbidden zones (the 3 app cards)
-    const forbidden = [];
-    const hub = document.getElementById('prodHub');
-    const terminal = document.querySelector('.terminal');
-    if (hub) forbidden.push(hub.getBoundingClientRect());
-    if (terminal) forbidden.push(terminal.getBoundingClientRect());
 
-    // Try random positions until we find one not overlapping any app
-    let attempts = 0;
-    let x, y;
-    do {
-      // Bias toward edges — the buddy prefers margins
-      const edge = Math.random();
-      if (edge < 0.3) {
-        // Bottom area
-        x = 40 + Math.random() * (vw - cw - 80);
-        y = vh - ch - 20 - Math.random() * 100;
-      } else if (edge < 0.6) {
-        // Right side
-        x = vw - cw - 20 - Math.random() * 100;
-        y = 80 + Math.random() * (vh - ch - 160);
-      } else {
-        // Left side
-        x = 20 + Math.random() * 100;
-        y = 80 + Math.random() * (vh - ch - 160);
-      }
-      attempts++;
-    } while (attempts < 20 && this.overlapsAny(x, y, cw, ch, forbidden));
+    const margin = 16;
+    const x = this.side === 'left' ? margin : (vw - cw - margin);
+    const ySafeTop = 120;
+    const ySafeBottom = vh - ch - 80;
+    const y = Math.max(ySafeTop, Math.min(ySafeBottom, ySafeTop + Math.random() * (ySafeBottom - ySafeTop)));
 
-    // Smooth transition
-    this.container.style.transition = 'left 2s ease-in-out, top 2s ease-in-out, bottom 2s ease-in-out, right 2s ease-in-out';
     this.container.style.position = 'fixed';
+    this.container.style.transition = 'none';
     this.container.style.left = `${x}px`;
     this.container.style.top = `${y}px`;
-    this.container.style.bottom = 'auto';
     this.container.style.right = 'auto';
+    this.container.style.bottom = 'auto';
+    this.container.dataset.side = this.side;
   }
 
-  overlapsAny(x, y, w, h, rects) {
-    const buddy = { left: x, top: y, right: x + w, bottom: y + h };
-    for (const r of rects) {
-      if (buddy.left < r.right + 20 && buddy.right > r.left - 20 &&
-          buddy.top < r.bottom + 20 && buddy.bottom > r.top - 20) {
-        return true;
-      }
+  reactToCursor() {
+    if (Date.now() - this.lastTeleportAt < 3000) return;
+    const vw = window.innerWidth;
+    const edgeThreshold = 140;
+    const onLeftEdge = this.mouseX < edgeThreshold;
+    const onRightEdge = this.mouseX > vw - edgeThreshold;
+    const currentSide = this.side;
+    const cursorSide = onLeftEdge ? 'left' : (onRightEdge ? 'right' : null);
+    if (!cursorSide) return;
+
+    const p = this.buddy.personality;
+    if (p === 'clingy' && cursorSide !== currentSide) {
+      this.side = cursorSide;
+      this.teleport();
+    } else if (p === 'shy' && cursorSide === currentSide) {
+      this.side = cursorSide === 'left' ? 'right' : 'left';
+      this.teleport();
     }
-    return false;
+  }
+
+  scheduleNextTeleport() {
+    const p = this.buddy.personality;
+    let min, max;
+    if (p === 'clingy') { min = 45000; max = 90000; }
+    else if (p === 'shy') { min = 180000; max = 360000; }
+    else if (p === 'chaotic') { min = 30000; max = 120000; }
+    else { min = 240000; max = 480000; } // stoic
+    const next = min + Math.random() * (max - min);
+    setTimeout(() => {
+      if (this.buddy.personality === 'chaotic') this.side = this.side === 'left' ? 'right' : 'left';
+      this.teleport();
+      this.scheduleNextTeleport();
+    }, next);
+  }
+
+  teleport() {
+    if (!this.artEl) return;
+    this.lastTeleportAt = Date.now();
+    this.positionOnEdge();
+    this.artEl.removeAttribute('data-effect');
+    void this.artEl.offsetWidth;
+    this.artEl.dataset.effect = this.buddy.effect;
+    setTimeout(() => this.artEl?.removeAttribute('data-effect'), 900);
   }
 
   setWorkingState(working) {
     if (this.isWorking === working || !this.artEl) return;
     this.isWorking = working;
-    
+
     if (working) {
       this.artEl.classList.add('working');
+      clearInterval(this.thoughtTimer);
       this.fetchThought();
-      this.thoughtTimer = setInterval(() => this.fetchThought(), 2 * 60 * 1000);
+      const baseInterval = this.buddy.personality === 'clingy' ? 4 * 60 * 1000
+                          : this.buddy.personality === 'stoic' ? 10 * 60 * 1000
+                          : 6 * 60 * 1000;
+      this.thoughtTimer = setInterval(() => this.fetchThought(), baseInterval);
     } else {
       this.artEl.classList.remove('working');
       clearInterval(this.thoughtTimer);
-      this.say(`Rest well.`);
     }
   }
 
   async fetchThought() {
-    let pomoStats = 0, subjects = [];
-    try { pomoStats = (JSON.parse(localStorage.getItem('0bsidian_pomo_stats')) || {}).cycles || 0; } catch {}
-    try { subjects = JSON.parse(localStorage.getItem('0bsidian_todos_v2')) || []; } catch {}
+    let pomoStats = 0;
+    try { pomoStats = (JSON.parse(localStorage.getItem(POMO_STATS_KEY)) || {}).cycles || 0; } catch {}
+
     let tasksDone = 0, totalTasks = 0;
-    subjects.forEach(s => {
-      totalTasks += s.tasks.length;
-      tasksDone += s.tasks.filter(t => t.done).length;
-    });
+    const topTasks = (this.todo?.topOpen(3) || []).join(' | ');
+    try {
+      const subjects = JSON.parse(localStorage.getItem(TODO_KEY)) || [];
+      subjects.forEach(s => { totalTasks += s.tasks.length; tasksDone += s.tasks.filter(t => t.done).length; });
+    } catch {}
+
+    const timer = window.appInstance?.pomodoro;
+    const mode = timer ? (timer.currentMode === 'pomodoro' ? 'work' : 'break') : 'work';
 
     try {
       const res = await fetch('/api/companion', {
@@ -984,15 +979,17 @@ class StudyCompanion {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: this.buddy.name,
-          trait: this.buddy.trait,
-          stats: `${pomoStats} pomodoros, ${tasksDone}/${totalTasks} tasks complete`
+          personality: this.buddy.personality,
+          mode,
+          stats: `${pomoStats} pomodoros done, ${tasksDone}/${totalTasks} tasks complete`,
+          topTasks
         })
       });
       if (res.ok) {
         const data = await res.json();
-        this.say(data.response);
+        if (data.response) this.say(data.response);
       }
-    } catch { /* noop */ }
+    } catch {}
   }
 
   say(text) {
@@ -1000,9 +997,8 @@ class StudyCompanion {
     this.lastMessage = text;
     this.speechEl.textContent = text;
     this.speechEl.classList.add('show');
-    
-    if(this.hideTimer) clearTimeout(this.hideTimer);
-    this.hideTimer = setTimeout(() => this.speechEl.classList.remove('show'), 20000);
+    if (this.hideTimer) clearTimeout(this.hideTimer);
+    this.hideTimer = setTimeout(() => this.speechEl.classList.remove('show'), 12000);
   }
 }
 
@@ -1013,16 +1009,35 @@ class TailscaleOverlay {
   }
 
   initEvents() {
-    document.getElementById('monogramName')?.addEventListener('click', () => this.open());
+    document.getElementById('loginPill')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
     document.getElementById('tsCancel')?.addEventListener('click', () => this.close());
-    document.getElementById('tsConfirm')?.addEventListener('click', () => {
-      window.location.href = "https://start.lokeshtewari.uk";
-    });
-    
-    this.overlay?.addEventListener('click', e => {
-      if (e.target === this.overlay) this.close();
-    });
+    document.getElementById('tsConfirm')?.addEventListener('click', () => { window.location.href = CONFIG.portalUrl; });
 
+    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
+    });
+  }
+
+  open() { this.overlay?.classList.add('open'); this.overlay?.setAttribute('aria-hidden', 'false'); }
+  close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
+}
+
+class ContactModal {
+  constructor() {
+    this.overlay = document.getElementById('contactOverlay');
+    this.form = document.getElementById('contactForm');
+    this.initEvents();
+  }
+
+  initEvents() {
+    document.getElementById('footerContactLink')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
+    document.getElementById('contactCancel')?.addEventListener('click', () => this.close());
+    document.getElementById('copyEmailBtn')?.addEventListener('click', () => this.copyEmail());
+
+    this.form?.addEventListener('submit', (e) => { e.preventDefault(); this.sendMailto(); });
+
+    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
     });
@@ -1031,50 +1046,110 @@ class TailscaleOverlay {
   open() {
     this.overlay?.classList.add('open');
     this.overlay?.setAttribute('aria-hidden', 'false');
+    setTimeout(() => document.getElementById('contactName')?.focus(), 100);
+  }
+  close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
+
+  async copyEmail() {
+    try {
+      await navigator.clipboard.writeText(CONFIG.contactEmail);
+      const btn = document.getElementById('copyEmailBtn');
+      if (btn) { const o = btn.textContent; btn.textContent = 'copied ✓'; setTimeout(() => btn.textContent = o, 1500); }
+    } catch {
+      prompt('Copy this email:', CONFIG.contactEmail);
+    }
   }
 
-  close() {
-    this.overlay?.classList.remove('open');
-    this.overlay?.setAttribute('aria-hidden', 'true');
+  sendMailto() {
+    const name = document.getElementById('contactName').value.trim();
+    const from = document.getElementById('contactEmail').value.trim();
+    const subject = document.getElementById('contactSubject').value.trim() || 'Hello from 0bsidian';
+    const message = document.getElementById('contactMessage').value.trim();
+    if (!name || !message) return;
+
+    const body = `${message}\n\n— ${name}${from ? `\nReply: ${from}` : ''}`;
+    const url = `mailto:${encodeURIComponent(CONFIG.contactEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = url;
+    setTimeout(() => this.close(), 300);
+  }
+}
+
+class PrivacyOverlay {
+  constructor() {
+    this.overlay = document.getElementById('privacyOverlay');
+    document.getElementById('footerPrivacyLink')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
+    document.getElementById('privacyClose')?.addEventListener('click', () => this.close());
+    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
+    });
+  }
+  open() { this.overlay?.classList.add('open'); this.overlay?.setAttribute('aria-hidden', 'false'); }
+  close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
+}
+
+class InstallHint {
+  constructor() {
+    this.btn = document.getElementById('installHint');
+    this.deferred = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.deferred = e;
+      if (this.btn) this.btn.hidden = false;
+    });
+    this.btn?.addEventListener('click', async () => {
+      if (!this.deferred) { this.btn.hidden = true; return; }
+      this.deferred.prompt();
+      await this.deferred.userChoice;
+      this.deferred = null;
+      this.btn.hidden = true;
+    });
+    window.addEventListener('appinstalled', () => { if (this.btn) this.btn.hidden = true; });
   }
 }
 
 class TerminalApp {
   constructor() {
-    this.themeManager = new ThemeManager();
+    document.documentElement.setAttribute('data-theme', 'dark');
     this.chatClient = new ChatClient();
     this.ui = new TerminalUI();
+    this.todo = new TodoManager();
     this.pomodoro = new PomodoroTimer();
     this.tailscale = new TailscaleOverlay();
-    this.todo = new TodoManager();
-    this.companion = new StudyCompanion();
-    
+    this.companion = new StudyCompanion(this.todo);
+    this.contact = new ContactModal();
+    this.privacy = new PrivacyOverlay();
+    this.install = new InstallHint();
+
     this.ui.setAppInstance(this);
-    
-    if (document.readyState === 'loading') {
-      window.addEventListener('DOMContentLoaded', () => this.boot());
-    } else {
-      this.boot();
-    }
+
+    if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', () => this.boot());
+    else this.boot();
   }
 
   boot() {
     window.appInstance = this;
     window.scrollTo(0, 0);
-    
+
     this.turnstileToken = null;
     this.turnstileWidgetId = null;
-    
+
     this.animateHeroSubtitle();
     setTimeout(() => this.bootTerminalEnvironment(), 450);
-    this.setupTerminalFullscreen();
     this.startHeartbeat();
     this.startStudyingCounter();
     this.setupChatScroll();
     this.setupTurnstile();
-    
+    this.registerServiceWorker();
+
     const yearEl = document.getElementById('footerYear');
     if (yearEl) yearEl.textContent = new Date().getFullYear();
+  }
+
+  registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 
   setupChatScroll() {
@@ -1093,8 +1168,7 @@ class TerminalApp {
     const wrap = document.getElementById('turnstileWrap');
     const widget = document.getElementById('turnstileWidget');
     if (!wrap || !widget) return;
-    
-    // Lock input until verified
+
     if (this.ui.elements.input) {
       this.ui.elements.input.setAttribute('contenteditable', 'false');
       this.ui.elements.input.dataset.placeholder = 'verify to chat...';
@@ -1121,92 +1195,51 @@ class TerminalApp {
       });
     };
 
-    // Wait for Turnstile script to load (async defer)
     if (typeof turnstile !== 'undefined') {
       renderWidget();
     } else {
       let attempts = 0;
       const poll = setInterval(() => {
         attempts++;
-        if (typeof turnstile !== 'undefined') {
+        if (typeof turnstile !== 'undefined') { clearInterval(poll); renderWidget(); }
+        else if (attempts >= 20) {
           clearInterval(poll);
-          renderWidget();
-        } else if (attempts >= 20) {
-          clearInterval(poll);
-          // Script never loaded — allow chat without verification (dev/localhost)
           wrap.classList.add('verified');
-          if (this.ui.elements.input) {
-            this.ui.elements.input.setAttribute('contenteditable', 'true');
-          }
+          if (this.ui.elements.input) this.ui.elements.input.setAttribute('contenteditable', 'true');
         }
       }, 500);
     }
   }
 
-  setupTerminalFullscreen() {
-    const btn = document.getElementById('termFullscreenBtn');
-    const terminal = document.querySelector('.terminal');
-    if (!btn || !terminal) return;
-
-    btn.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        terminal.requestFullscreen().then(() => {
-          terminal.classList.add('fullscreen');
-          btn.textContent = '✕';
-        }).catch(() => {
-          terminal.classList.add('fullscreen');
-          btn.textContent = '✕';
-        });
-      } else {
-        document.exitFullscreen().then(() => {
-          terminal.classList.remove('fullscreen');
-          btn.textContent = '⛶';
-        }).catch(() => {
-          terminal.classList.remove('fullscreen');
-          btn.textContent = '⛶';
-        });
-      }
-    });
-
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && terminal.classList.contains('fullscreen')) {
-        terminal.classList.remove('fullscreen');
-        btn.textContent = '⛶';
-      }
-    });
-  }
-
   startHeartbeat() {
-    const beat = () => {
-      fetch('/api/heartbeat', { method: 'POST' }).catch(() => {});
-    };
+    const beat = () => fetch('/api/heartbeat', { method: 'POST' }).catch(() => {});
     beat();
-    setInterval(beat, 60000); // Every 60 seconds
+    setInterval(beat, 60000);
   }
 
   startStudyingCounter() {
     const el = document.getElementById('studyingCount');
     if (!el) return;
-    
     const poll = async () => {
       try {
         const res = await fetch('/api/studying');
         if (res.ok) {
           const data = await res.json();
-          el.textContent = data.count || 1;
+          el.textContent = (typeof data.count === 'number') ? Math.max(1, data.count) : '—';
+        } else {
+          el.textContent = '—';
         }
       } catch {
-        el.textContent = '1';
+        el.textContent = '—';
       }
     };
     poll();
-    setInterval(poll, 30000); // Every 30 seconds
+    setInterval(poll, 15000);
   }
 
   animateHeroSubtitle() {
     const el = document.getElementById('hero-subtitle');
     if (!el) return;
-    
     let i = 0;
     const interval = setInterval(() => {
       el.textContent = CONFIG.subtitleText.slice(0, ++i);
@@ -1217,41 +1250,29 @@ class TerminalApp {
   bootTerminalEnvironment() {
     if (this.ui.elements.terminal) this.ui.elements.terminal.classList.add('ai-mode');
     if (this.ui.elements.host) this.ui.elements.host.textContent = '0bsidian-bit';
-    if (this.ui.elements.badge) this.ui.elements.badge.textContent = CONFIG.botModel;
+    if (this.ui.elements.badge) this.ui.elements.badge.textContent = '~ · zsh';
     if (this.ui.elements.prompt) this.ui.elements.prompt.textContent = '>';
-    
+
     this.ui.clearTerminal();
 
     const turns = this.chatClient.getTurns();
-    if (turns > 0) {
-      this.ui.printLine(`${turns} exchange${turns !== 1 ? 's' : ''} in memory  ·  /forget to clear`, 'ai-system');
-    } else {
-      this.ui.printLine('type naturally to chat with AI', 'ai-system');
-    }
-    
+    if (turns > 0) this.ui.printLine(`${turns} exchange${turns !== 1 ? 's' : ''} in memory  ·  /forget to clear`, 'ai-system');
+    else this.ui.printLine('type naturally to chat with AI', 'ai-system');
+
     this.ui.printBlank();
   }
 
   routeInput(raw) {
     const cmd = raw.trim().toLowerCase();
     if (!cmd) return;
-
-    if (!cmd.startsWith('/')) {
-      this.handleAIQuery(raw.trim());
-      return;
-    }
-
+    if (!cmd.startsWith('/')) { this.handleAIQuery(raw.trim()); return; }
     this.handleLocalCommand(cmd);
   }
 
   handleLocalCommand(cmd) {
     this.ui.printUserInput(cmd);
 
-    if (cmd === '/clear') {
-      this.ui.clearTerminal();
-      return;
-    }
-
+    if (cmd === '/clear') { this.ui.clearTerminal(); return; }
     if (cmd === '/forget') {
       this.chatClient.clearMemory();
       this.ui.printLine('memory cleared.', 'dim');
@@ -1270,14 +1291,6 @@ class TerminalApp {
       this.ui.printLine(entry);
     } else if (typeof entry === 'function') {
       this.ui.printLine(entry());
-    } else if (typeof entry === 'object') {
-      if (key === 'theme') {
-        const result = this.themeManager.toggleTheme();
-        this.ui.printLine(`theme → ${result}`);
-      } else {
-        this.ui.printLine(entry.text, 'accent');
-        if (entry.effect === 'pause-caret') this.ui.pauseCaret();
-      }
     }
 
     this.ui.printBlank();
@@ -1292,7 +1305,6 @@ class TerminalApp {
     this.chatClient.pushUserMessage(query);
 
     if (!isFirst) this.ui.printSeparator();
-    
     this.ui.printUserAIMessage(query);
     this.ui.printBlank();
 
@@ -1305,7 +1317,7 @@ class TerminalApp {
       this.chatClient.pushAssistantMessage(response);
     } catch (err) {
       spinner.remove();
-      this.chatClient.popLastMessage(); // Revert user message on error
+      this.chatClient.popLastMessage();
       this.ui.printLine(`error: ${err.message}`, 'ai-error');
     } finally {
       this.ui.printBlank();
@@ -1315,5 +1327,4 @@ class TerminalApp {
   }
 }
 
-// Initialize Application
 new TerminalApp();
