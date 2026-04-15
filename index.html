@@ -77,21 +77,77 @@
             </div>
 
             <div class="pomo-settings-menu" id="pomoSettingsMenu">
+              <div class="setting-section-label">time (minutes)</div>
+
+              <div class="setting-slider-row">
+                <span>work</span>
+                <div class="setting-slider-right">
+                  <input type="range" class="pomo-slider" id="settingWorkDur" min="1" max="90" value="25">
+                  <span class="slider-val" id="settingWorkDurVal">25</span>
+                </div>
+              </div>
+              <div class="setting-slider-row">
+                <span>short break</span>
+                <div class="setting-slider-right">
+                  <input type="range" class="pomo-slider" id="settingShortBreak" min="1" max="30" value="5">
+                  <span class="slider-val" id="settingShortBreakVal">5</span>
+                </div>
+              </div>
+              <div class="setting-slider-row">
+                <span>long break</span>
+                <div class="setting-slider-right">
+                  <input type="range" class="pomo-slider" id="settingLongBreak" min="5" max="60" value="15">
+                  <span class="slider-val" id="settingLongBreakVal">15</span>
+                </div>
+              </div>
+
               <div class="setting-row">
-                <span>ticking sound</span>
-                <input type="checkbox" id="settingTick">
+                <span>long break every</span>
+                <div class="interval-wrap">
+                  <button class="interval-btn pop-btn" id="intervalDec">−</button>
+                  <span class="interval-val" id="settingLongIntervalDisplay">4</span>
+                  <span class="interval-unit">sessions</span>
+                  <button class="interval-btn pop-btn" id="intervalInc">+</button>
+                </div>
+              </div>
+
+              <div class="setting-section-label">auto start</div>
+
+              <div class="setting-row">
+                <span>breaks</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingAutoBreaks" checked>
+                  <span class="toggle-track"></span>
+                </label>
+              </div>
+              <div class="setting-row">
+                <span>pomodoros</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingAutoPomodoros">
+                  <span class="toggle-track"></span>
+                </label>
+              </div>
+
+              <div class="setting-section-label">sounds</div>
+
+              <div class="setting-row">
+                <span>ticking</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingTick">
+                  <span class="toggle-track"></span>
+                </label>
               </div>
               <div class="setting-row">
                 <span>break bell</span>
-                <input type="checkbox" id="settingBell" checked>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingBell" checked>
+                  <span class="toggle-track"></span>
+                </label>
               </div>
+
+              <div class="setting-section-label">timer name</div>
               <div class="setting-row">
-                <span>auto-advance</span>
-                <input type="checkbox" id="settingAutoAdvance" checked>
-              </div>
-              <div class="setting-row setting-rename-row">
-                <span>timer name</span>
-                <input type="text" id="pomoNameInput" placeholder="focus" maxlength="20">
+                <input type="text" id="pomoNameInput" class="setting-name-input" placeholder="focus" maxlength="20">
               </div>
             </div>
 

@@ -348,11 +348,33 @@ class PomoAudio {
 const POMO_STATE_KEY = '0bsidian_pomo_state_v1';
 const POMO_STATS_KEY = '0bsidian_pomo_stats';
 const POMO_NAMES_KEY = '0bsidian_pomo_names_v1';
+const POMO_SETTINGS_KEY = '0bsidian_pomo_settings_v1';
 const POMO_CIRCUMFERENCE = 339.292;
+const POMO_DEFAULT_SETTINGS = {
+  workDuration: 25,
+  shortBreakDuration: 5,
+  longBreakDuration: 15,
+  longBreakInterval: 4,
+  autoStartBreaks: true,
+  autoStartPomodoros: false,
+  tickingSound: false,
+  bell: true,
+};
 
 class PomodoroTimer {
   constructor() {
-    this.modes = { pomodoro: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
+    // Load settings first so modes are correct
+    this.settings = { ...POMO_DEFAULT_SETTINGS };
+    try {
+      const saved = JSON.parse(localStorage.getItem(POMO_SETTINGS_KEY));
+      if (saved && typeof saved === 'object') this.settings = { ...this.settings, ...saved };
+    } catch {}
+
+    this.modes = {
+      pomodoro: this.settings.workDuration * 60,
+      shortBreak: this.settings.shortBreakDuration * 60,
+      longBreak: this.settings.longBreakDuration * 60,
+    };
     this.currentMode = 'pomodoro';
     this.timeLeft = this.modes.pomodoro;
     this.isRunning = false;
@@ -362,7 +384,9 @@ class PomodoroTimer {
 
     let stats = { cycles: 0 };
     try { stats = JSON.parse(localStorage.getItem(POMO_STATS_KEY)) || stats; } catch {}
-    this.cycle = stats.cycles + 1;
+    this.totalCycles = stats.cycles;
+    // position within current interval (0 = start of a new set)
+    this.setInCount = this.totalCycles % this.settings.longBreakInterval;
 
     this.names = { pomodoro: 'focus', shortBreak: 'short', longBreak: 'long' };
     try {
@@ -381,19 +405,17 @@ class PomodoroTimer {
       toggleBtn: document.getElementById('pomoToggle'),
       resetBtn: document.getElementById('pomoReset'),
       cycleInfo: document.getElementById('pomoCycle'),
-      tomatoes: document.querySelectorAll('.pomo-tomato'),
+      cyclesWrap: document.getElementById('pomoCyclesWrap'),
       settingsBtn: document.getElementById('pomoSettingsBtn'),
       settingsMenu: document.getElementById('pomoSettingsMenu'),
-      settingTick: document.getElementById('settingTick'),
-      settingBell: document.getElementById('settingBell'),
-      settingAutoAdvance: document.getElementById('settingAutoAdvance'),
       fullscreenBtn: document.getElementById('hubFullscreenBtn'),
       hub: document.getElementById('prodHub'),
       dashboard: document.getElementById('dashboardLayout')
     };
 
-    if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.cycle;
-    this.updateCycleDots();
+    if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.totalCycles + 1;
+    this.renderCycleDots();
+    this.applySettingsToUI();
 
     this.initEvents();
     this.hydrateFromStorage();
@@ -402,11 +424,43 @@ class PomodoroTimer {
     this.updateName();
   }
 
+  applySettingsToUI() {
+    const s = this.settings;
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
+    setVal('settingWorkDur', s.workDuration);       setTxt('settingWorkDurVal', s.workDuration);
+    setVal('settingShortBreak', s.shortBreakDuration); setTxt('settingShortBreakVal', s.shortBreakDuration);
+    setVal('settingLongBreak', s.longBreakDuration);   setTxt('settingLongBreakVal', s.longBreakDuration);
+    setTxt('settingLongIntervalDisplay', s.longBreakInterval);
+    setChk('settingAutoBreaks', s.autoStartBreaks);
+    setChk('settingAutoPomodoros', s.autoStartPomodoros);
+    setChk('settingTick', s.tickingSound);
+    setChk('settingBell', s.bell);
+  }
+
+  saveSettings() {
+    try { localStorage.setItem(POMO_SETTINGS_KEY, JSON.stringify(this.settings)); } catch {}
+  }
+
+  renderCycleDots() {
+    const wrap = this.elements.cyclesWrap;
+    if (!wrap) return;
+    wrap.querySelectorAll('.pomo-tomato').forEach(d => d.remove());
+    const interval = this.settings.longBreakInterval;
+    for (let i = 0; i < interval; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'pomo-tomato' + (i < this.setInCount ? ' active' : '');
+      dot.title = `session ${i + 1} of ${interval}`;
+      wrap.appendChild(dot);
+    }
+  }
+
   initEvents() {
     this.elements.tabs.forEach(tab => {
       tab.addEventListener('click', async () => {
         if (this.isRunning) {
-          if (!(await siteConfirm('Switch mode? This will reset your current timer.'))) return;
+          if (!(await siteConfirm('Switch mode? This will reset the current timer.'))) return;
         }
         this.setMode(tab.dataset.mode);
       });
@@ -420,16 +474,23 @@ class PomodoroTimer {
     });
     this.elements.settingsBtn?.addEventListener('click', () => this.elements.settingsMenu?.classList.toggle('open'));
 
+    // Close settings when clicking outside
+    document.addEventListener('click', (e) => {
+      if (this.elements.settingsMenu?.classList.contains('open') &&
+          !this.elements.settingsMenu.contains(e.target) &&
+          e.target !== this.elements.settingsBtn) {
+        this.elements.settingsMenu.classList.remove('open');
+      }
+    });
+
     this.elements.nameInput?.addEventListener('input', (e) => {
       const v = (e.target.value || '').trim().slice(0, 20);
       this.names[this.currentMode] = v || this.defaultName(this.currentMode);
       try { localStorage.setItem(POMO_NAMES_KEY, JSON.stringify(this.names)); } catch {}
       this.updateName();
-      this.updateCycleTitles();
     });
 
     this.elements.fullscreenBtn?.addEventListener('click', () => this.toggleFullscreen());
-
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && this.elements.dashboard?.classList.contains('fullscreen')) {
         this.elements.dashboard.classList.remove('fullscreen');
@@ -437,12 +498,50 @@ class PomodoroTimer {
       }
     });
 
-    document.querySelectorAll('.pomo-tomato').forEach(dot => {
-      dot.addEventListener('mouseenter', () => {
-        const c = Number(dot.dataset.cycle);
-        dot.title = `cycle ${c} · ${this.names.pomodoro || 'focus'}`;
+    // Duration sliders
+    const bindSlider = (inputId, valId, settingKey, modeKey) => {
+      const el = document.getElementById(inputId);
+      const valEl = document.getElementById(valId);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        const v = parseInt(el.value, 10);
+        if (valEl) valEl.textContent = v;
+        this.settings[settingKey] = v;
+        this.saveSettings();
+        this.modes[modeKey] = v * 60;
+        if (!this.isRunning && this.currentMode === modeKey) {
+          this.timeLeft = this.modes[modeKey];
+          this.updateDisplay();
+        }
       });
-    });
+    };
+    bindSlider('settingWorkDur',    'settingWorkDurVal',    'workDuration',       'pomodoro');
+    bindSlider('settingShortBreak', 'settingShortBreakVal', 'shortBreakDuration', 'shortBreak');
+    bindSlider('settingLongBreak',  'settingLongBreakVal',  'longBreakDuration',  'longBreak');
+
+    // Long break interval +/−
+    const intervalDisplay = document.getElementById('settingLongIntervalDisplay');
+    const changeInterval = (delta) => {
+      const v = Math.max(1, Math.min(10, this.settings.longBreakInterval + delta));
+      this.settings.longBreakInterval = v;
+      if (intervalDisplay) intervalDisplay.textContent = v;
+      this.setInCount = Math.min(this.setInCount, v - 1);
+      this.saveSettings();
+      this.renderCycleDots();
+    };
+    document.getElementById('intervalDec')?.addEventListener('click', () => changeInterval(-1));
+    document.getElementById('intervalInc')?.addEventListener('click', () => changeInterval(1));
+
+    // Toggle switches
+    const bindToggle = (id, key) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('change', () => { this.settings[key] = el.checked; this.saveSettings(); });
+    };
+    bindToggle('settingAutoBreaks',    'autoStartBreaks');
+    bindToggle('settingAutoPomodoros', 'autoStartPomodoros');
+    bindToggle('settingTick',          'tickingSound');
+    bindToggle('settingBell',          'bell');
   }
 
   toggleFullscreen() {
@@ -477,21 +576,6 @@ class PomodoroTimer {
     if (this.elements.nameInput && this.elements.nameInput.value !== name) this.elements.nameInput.value = name;
   }
 
-  updateCycleTitles() {
-    const name = this.names.pomodoro || 'focus';
-    document.querySelectorAll('.pomo-tomato').forEach(dot => {
-      const c = Number(dot.dataset.cycle);
-      dot.title = `cycle ${c} · ${name}`;
-    });
-  }
-
-  updateCycleDots() {
-    this.elements.tomatoes.forEach((t, i) => {
-      const activeIdx = ((this.cycle - 1) % 4);
-      if (i <= activeIdx) t.classList.add('active');
-      else t.classList.remove('active');
-    });
-  }
 
   setMode(mode, { autoStart = false, silent = false } = {}) {
     if (!this.modes[mode]) return;
@@ -516,10 +600,9 @@ class PomodoroTimer {
     else this.elements.progress.style.stroke = '#5eead4';
   }
 
-  async toggle() {
+  toggle() {
     this.audio.init();
     if (this.isRunning) {
-      if (!(await siteConfirm('Pause the timer?'))) return;
       this.pause();
     } else {
       this.start();
@@ -559,7 +642,7 @@ class PomodoroTimer {
   tick() {
     this.timeLeft = Math.max(0, Math.ceil((this.endsAt - Date.now()) / 1000));
     this.updateDisplay();
-    if (this.elements.settingTick?.checked) this.audio.playTick();
+    if (this.settings.tickingSound) this.audio.playTick();
 
     if (this.timeLeft <= 0) {
       this.onComplete();
@@ -570,23 +653,26 @@ class PomodoroTimer {
 
   onComplete() {
     this.pause();
-    if (this.elements.settingBell?.checked) this.audio.playBell();
-
-    const autoAdvance = this.elements.settingAutoAdvance?.checked !== false;
+    if (this.settings.bell) this.audio.playBell();
 
     if (this.currentMode === 'pomodoro') {
-      let stats = { cycles: 0 };
-      try { stats = JSON.parse(localStorage.getItem(POMO_STATS_KEY)) || stats; } catch {}
-      stats.cycles++;
-      localStorage.setItem(POMO_STATS_KEY, JSON.stringify(stats));
-      this.cycle = stats.cycles + 1;
-      if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.cycle;
-      this.updateCycleDots();
+      this.totalCycles++;
+      this.setInCount++;
+      try { localStorage.setItem(POMO_STATS_KEY, JSON.stringify({ cycles: this.totalCycles })); } catch {}
+      if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.totalCycles + 1;
+      this.renderCycleDots();
 
-      const nextMode = ((this.cycle - 1) % 4 === 0) ? 'longBreak' : 'shortBreak';
-      this.setMode(nextMode, { autoStart: autoAdvance });
+      if (this.setInCount >= this.settings.longBreakInterval) {
+        this.setMode('longBreak', { autoStart: this.settings.autoStartBreaks });
+      } else {
+        this.setMode('shortBreak', { autoStart: this.settings.autoStartBreaks });
+      }
     } else {
-      this.setMode('pomodoro', { autoStart: autoAdvance });
+      if (this.currentMode === 'longBreak') {
+        this.setInCount = 0;
+        this.renderCycleDots();
+      }
+      this.setMode('pomodoro', { autoStart: this.settings.autoStartPomodoros });
     }
   }
 
