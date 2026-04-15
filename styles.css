@@ -76,7 +76,10 @@ html, body {
   text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  /* Use clip instead of hidden — 'hidden' creates a scroll container that
+     breaks position:fixed on iOS Safari. 'clip' prevents overflow without
+     creating a new scroll context. */
+  overflow-x: clip;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -1845,8 +1848,8 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   }
 
   .study-companion {
-    bottom: 12px;
-    right: 12px;
+    top: 72px;
+    left: 12px;
   }
 
   .companion-art {
@@ -1933,7 +1936,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
   .study-companion {
     transform: scale(0.85);
-    transform-origin: bottom right;
+    transform-origin: top left;
   }
 }
 
