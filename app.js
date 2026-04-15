@@ -1073,45 +1073,12 @@ class StudyCompanion {
   }
 
   positionOnEdge() {
-    if (!this.container) return;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const cw = this.container.offsetWidth || 80;
-    const ch = this.container.offsetHeight || 100;
-
-    const margin = 16;
-    const x = this.side === 'left' ? margin : (vw - cw - margin);
-    const ySafeTop = 120;
-    const ySafeBottom = vh - ch - 80;
-    const y = Math.max(ySafeTop, Math.min(ySafeBottom, ySafeTop + Math.random() * (ySafeBottom - ySafeTop)));
-
-    this.container.style.position = 'fixed';
-    this.container.style.transition = 'none';
-    this.container.style.left = `${x}px`;
-    this.container.style.top = `${y}px`;
-    this.container.style.right = 'auto';
-    this.container.style.bottom = 'auto';
-    this.container.dataset.side = this.side;
+    // Companion lives in the topbar — clear any stale inline styles
+    if (this.container) this.container.removeAttribute('style');
   }
 
   reactToCursor() {
-    if (Date.now() - this.lastTeleportAt < 3000) return;
-    const vw = window.innerWidth;
-    const edgeThreshold = 140;
-    const onLeftEdge = this.mouseX < edgeThreshold;
-    const onRightEdge = this.mouseX > vw - edgeThreshold;
-    const currentSide = this.side;
-    const cursorSide = onLeftEdge ? 'left' : (onRightEdge ? 'right' : null);
-    if (!cursorSide) return;
-
-    const p = this.buddy.personality;
-    if (p === 'clingy' && cursorSide !== currentSide) {
-      this.side = cursorSide;
-      this.teleport();
-    } else if (p === 'shy' && cursorSide === currentSide) {
-      this.side = cursorSide === 'left' ? 'right' : 'left';
-      this.teleport();
-    }
+    // Buddy is fixed at top-left — no cursor-based movement
   }
 
   scheduleNextTeleport() {
@@ -1340,8 +1307,8 @@ class TerminalApp {
     setTimeout(() => this.bootTerminalEnvironment(), 450);
     this.startHeartbeat();
     this.startStudyingCounter();
+    this.setupTabs();
     this.setupChatScroll();
-    this.setupTurnstile();
     this.registerServiceWorker();
 
     const yearEl = document.getElementById('footerYear');
@@ -1354,15 +1321,44 @@ class TerminalApp {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 
+  setupTabs() {
+    const tabs = document.querySelectorAll('.dash-tab');
+    const studyPane = document.getElementById('dashStudyPane');
+    const terminalPane = document.getElementById('dashTerminalPane');
+    if (!tabs.length || !studyPane || !terminalPane) return;
+
+    let terminalReady = false;
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.tab;
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === target));
+        studyPane.classList.toggle('dash-pane--hidden', target !== 'study');
+        terminalPane.classList.toggle('dash-pane--hidden', target !== 'terminal');
+        if (target === 'terminal') {
+          if (!terminalReady) {
+            terminalReady = true;
+            // Initialize Turnstile lazily on first terminal tab open
+            this.setupTurnstile();
+          }
+          setTimeout(() => this.ui.elements.input?.focus(), 150);
+        }
+      });
+    });
+  }
+
+  switchToTab(tab) {
+    const tabBtn = document.querySelector(`.dash-tab[data-tab="${tab}"]`);
+    if (tabBtn) tabBtn.click();
+  }
+
   setupChatScroll() {
     const btn = document.getElementById('chatScrollBtn');
     if (!btn) return;
     btn.addEventListener('click', () => {
-      const terminal = document.getElementById('terminal');
-      if (terminal) {
-        terminal.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => this.ui.elements.input?.focus(), 600);
-      }
+      this.switchToTab('terminal');
+      const dashLayout = document.getElementById('dashboardLayout');
+      if (dashLayout) dashLayout.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 

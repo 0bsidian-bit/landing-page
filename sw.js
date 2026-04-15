@@ -1,4 +1,4 @@
-const CACHE = '0bsidian-v4';
+const CACHE = '0bsidian-v5';
 const SHELL = [
   '/',
   '/styles.css',

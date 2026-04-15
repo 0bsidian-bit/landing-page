@@ -21,20 +21,18 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="0bsidian">
-<link rel="stylesheet" href="/styles.css?v=4">
+<link rel="stylesheet" href="/styles.css?v=7">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script src="/app.js?v=4" defer></script>
+<script src="/app.js?v=6" defer></script>
 </head>
 <body>
 <div class="page">
     <div class="topbar">
       <div class="monogram">
-        <span class="monogram-mark">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"/>
-          </svg>
-        </span>
-        <span class="monogram-name" id="monogramName">Dr. Lokesh Tewari</span>
+        <div class="study-companion" id="studyCompanion">
+          <div class="companion-art" id="companionArt"></div>
+          <div class="speech-bubble" id="companionSpeech"></div>
+        </div>
       </div>
       <div class="topbar-right">
         <a class="login-pill" id="loginPill" href="#" title="Private portal">login</a>
@@ -54,8 +52,14 @@
       <p class="subtitle" id="hero-subtitle"></p>
 
       <div class="dashboard-layout" id="dashboardLayout">
-        <div class="productivity-hub" id="prodHub">
-          <div class="hub-controls">
+
+        <!-- Main tab bar -->
+        <div class="dash-tab-bar">
+          <div class="dash-tabs">
+            <button class="dash-tab active" data-tab="study">study</button>
+            <button class="dash-tab" data-tab="terminal">terminal</button>
+          </div>
+          <div class="dash-bar-right">
             <div class="studying-now" id="studyingNow" title="Active study sessions right now">
               <span class="studying-dot"></span>
               <span id="studyingCount">—</span> <span class="studying-label">studying now</span>
@@ -64,163 +68,178 @@
               <span class="hub-fs-icon">⛶</span><span class="hub-fs-label">focus</span>
             </button>
           </div>
-
-          <!-- Pomodoro Card -->
-          <div class="pomodoro-card" id="pomodoroCard">
-            <div class="pomo-header-flex">
-              <div class="pomo-tabs">
-                <button class="pomo-tab pop-btn active" data-mode="pomodoro">pomodoro</button>
-                <button class="pomo-tab pop-btn" data-mode="shortBreak">short break</button>
-                <button class="pomo-tab pop-btn" data-mode="longBreak">long break</button>
-              </div>
-              <button class="pomo-settings-btn pop-btn" id="pomoSettingsBtn" title="Settings">⚙</button>
-            </div>
-
-            <div class="pomo-settings-menu" id="pomoSettingsMenu">
-              <div class="setting-section-label">time (minutes)</div>
-
-              <div class="setting-slider-row">
-                <span>work</span>
-                <div class="setting-slider-right">
-                  <input type="range" class="pomo-slider" id="settingWorkDur" min="1" max="90" value="25">
-                  <span class="slider-val" id="settingWorkDurVal">25</span>
-                </div>
-              </div>
-              <div class="setting-slider-row">
-                <span>short break</span>
-                <div class="setting-slider-right">
-                  <input type="range" class="pomo-slider" id="settingShortBreak" min="1" max="30" value="5">
-                  <span class="slider-val" id="settingShortBreakVal">5</span>
-                </div>
-              </div>
-              <div class="setting-slider-row">
-                <span>long break</span>
-                <div class="setting-slider-right">
-                  <input type="range" class="pomo-slider" id="settingLongBreak" min="5" max="60" value="15">
-                  <span class="slider-val" id="settingLongBreakVal">15</span>
-                </div>
-              </div>
-
-              <div class="setting-row">
-                <span>long break every</span>
-                <div class="interval-wrap">
-                  <button class="interval-btn pop-btn" id="intervalDec">−</button>
-                  <span class="interval-val" id="settingLongIntervalDisplay">4</span>
-                  <span class="interval-unit">sessions</span>
-                  <button class="interval-btn pop-btn" id="intervalInc">+</button>
-                </div>
-              </div>
-
-              <div class="setting-section-label">auto start</div>
-
-              <div class="setting-row">
-                <span>breaks</span>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="settingAutoBreaks" checked>
-                  <span class="toggle-track"></span>
-                </label>
-              </div>
-              <div class="setting-row">
-                <span>pomodoros</span>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="settingAutoPomodoros">
-                  <span class="toggle-track"></span>
-                </label>
-              </div>
-
-              <div class="setting-section-label">sounds</div>
-
-              <div class="setting-row">
-                <span>ticking</span>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="settingTick">
-                  <span class="toggle-track"></span>
-                </label>
-              </div>
-              <div class="setting-row">
-                <span>break bell</span>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="settingBell" checked>
-                  <span class="toggle-track"></span>
-                </label>
-              </div>
-
-              <div class="setting-section-label">timer name</div>
-              <div class="setting-row">
-                <input type="text" id="pomoNameInput" class="setting-name-input" placeholder="focus" maxlength="20">
-              </div>
-            </div>
-
-            <div class="pomo-circle-wrap">
-              <svg class="pomo-svg" viewBox="0 0 120 120">
-                <circle class="pomo-bg" cx="60" cy="60" r="54"></circle>
-                <circle class="pomo-progress" cx="60" cy="60" r="54" id="pomoProgress" stroke-dasharray="339.292" stroke-dashoffset="0"></circle>
-              </svg>
-              <div class="pomo-time" id="pomoTime">25:00</div>
-              <div class="pomo-name-display" id="pomoNameDisplay">focus</div>
-            </div>
-            <div class="pomo-controls">
-              <button class="pomo-btn pop-btn" id="pomoToggle">▶</button>
-              <button class="pomo-btn pop-btn pomo-reset" id="pomoReset">↻</button>
-            </div>
-
-            <div class="pomo-footer">
-              <div class="pomo-cycles-wrap" id="pomoCyclesWrap">
-                <span class="pomo-cycle-label">cycle: <strong id="pomoCycle">1</strong></span>
-                <span class="pomo-tomato cycle-1" data-cycle="1" title="cycle 1"></span>
-                <span class="pomo-tomato cycle-2" data-cycle="2" title="cycle 2"></span>
-                <span class="pomo-tomato cycle-3" data-cycle="3" title="cycle 3"></span>
-                <span class="pomo-tomato cycle-4" data-cycle="4" title="cycle 4"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Todo List -->
-          <div class="todo-card" id="todoCard">
-            <div class="todo-header">tasks</div>
-            <div class="todo-input-wrap">
-              <input type="color" id="todoColor" value="#e07878" title="Subject Color">
-              <input type="text" id="todoInput" placeholder="add subject..." autocomplete="off">
-              <button id="todoAdd" class="pop-btn">+</button>
-            </div>
-            <div class="todo-list-scroll" id="todoList"></div>
-
-            <div class="session-log-section">
-              <div class="session-log-header">
-                <span class="session-log-title">sessions</span>
-                <span class="session-log-count" id="sessionLogCount">0</span>
-                <button class="session-log-clear pop-btn" id="sessionLogClear" title="Clear all session history">clear</button>
-              </div>
-              <div id="sessionLog" class="session-log-list"></div>
-            </div>
-          </div>
         </div>
 
-        <div class="section-divider">
-          <span class="divider-label">terminal</span>
-        </div>
+        <!-- Study pane -->
+        <div class="dash-pane" id="dashStudyPane">
+          <div class="productivity-hub" id="prodHub">
 
-        <div class="terminal" id="terminal">
-          <div class="terminal-header">
-            <div>
-              <span class="host" id="term-host">0bsidian-bit</span>
-              <span class="badge" id="term-badge">~ · zsh</span>
+            <!-- Left column: pomodoro + session log -->
+            <div class="pomo-col">
+
+              <!-- Pomodoro Card -->
+              <div class="pomodoro-card" id="pomodoroCard">
+                <div class="pomo-header-flex">
+                  <div class="pomo-tabs">
+                    <button class="pomo-tab pop-btn active" data-mode="pomodoro">pomodoro</button>
+                    <button class="pomo-tab pop-btn" data-mode="shortBreak">short break</button>
+                    <button class="pomo-tab pop-btn" data-mode="longBreak">long break</button>
+                  </div>
+                  <button class="pomo-settings-btn pop-btn" id="pomoSettingsBtn" title="Settings">⚙</button>
+                </div>
+
+                <div class="pomo-settings-menu" id="pomoSettingsMenu">
+                  <div class="setting-section-label">time (minutes)</div>
+
+                  <div class="setting-slider-row">
+                    <span>work</span>
+                    <div class="setting-slider-right">
+                      <input type="range" class="pomo-slider" id="settingWorkDur" min="1" max="90" value="25">
+                      <span class="slider-val" id="settingWorkDurVal">25</span>
+                    </div>
+                  </div>
+                  <div class="setting-slider-row">
+                    <span>short break</span>
+                    <div class="setting-slider-right">
+                      <input type="range" class="pomo-slider" id="settingShortBreak" min="1" max="30" value="5">
+                      <span class="slider-val" id="settingShortBreakVal">5</span>
+                    </div>
+                  </div>
+                  <div class="setting-slider-row">
+                    <span>long break</span>
+                    <div class="setting-slider-right">
+                      <input type="range" class="pomo-slider" id="settingLongBreak" min="5" max="60" value="15">
+                      <span class="slider-val" id="settingLongBreakVal">15</span>
+                    </div>
+                  </div>
+
+                  <div class="setting-row">
+                    <span>long break every</span>
+                    <div class="interval-wrap">
+                      <button class="interval-btn pop-btn" id="intervalDec">−</button>
+                      <span class="interval-val" id="settingLongIntervalDisplay">4</span>
+                      <span class="interval-unit">sessions</span>
+                      <button class="interval-btn pop-btn" id="intervalInc">+</button>
+                    </div>
+                  </div>
+
+                  <div class="setting-section-label">auto start</div>
+
+                  <div class="setting-row">
+                    <span>breaks</span>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="settingAutoBreaks" checked>
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+                  <div class="setting-row">
+                    <span>pomodoros</span>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="settingAutoPomodoros">
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+
+                  <div class="setting-section-label">sounds</div>
+
+                  <div class="setting-row">
+                    <span>ticking</span>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="settingTick">
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+                  <div class="setting-row">
+                    <span>break bell</span>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="settingBell" checked>
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+
+                  <div class="setting-section-label">timer name</div>
+                  <div class="setting-row">
+                    <input type="text" id="pomoNameInput" class="setting-name-input" placeholder="focus" maxlength="20">
+                  </div>
+                </div>
+
+                <div class="pomo-circle-wrap">
+                  <svg class="pomo-svg" viewBox="0 0 120 120">
+                    <circle class="pomo-bg" cx="60" cy="60" r="54"></circle>
+                    <circle class="pomo-progress" cx="60" cy="60" r="54" id="pomoProgress" stroke-dasharray="339.292" stroke-dashoffset="0"></circle>
+                  </svg>
+                  <div class="pomo-time" id="pomoTime">25:00</div>
+                  <div class="pomo-name-display" id="pomoNameDisplay">focus</div>
+                </div>
+                <div class="pomo-controls">
+                  <button class="pomo-btn pop-btn" id="pomoToggle">▶</button>
+                  <button class="pomo-btn pop-btn pomo-reset" id="pomoReset">↻</button>
+                </div>
+
+                <div class="pomo-footer">
+                  <div class="pomo-cycles-wrap" id="pomoCyclesWrap">
+                    <span class="pomo-cycle-label">cycle: <strong id="pomoCycle">1</strong></span>
+                    <span class="pomo-tomato cycle-1" data-cycle="1" title="cycle 1"></span>
+                    <span class="pomo-tomato cycle-2" data-cycle="2" title="cycle 2"></span>
+                    <span class="pomo-tomato cycle-3" data-cycle="3" title="cycle 3"></span>
+                    <span class="pomo-tomato cycle-4" data-cycle="4" title="cycle 4"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Session Log (below pomodoro) -->
+              <div class="session-log-card">
+                <div class="session-log-header">
+                  <span class="session-log-title">sessions</span>
+                  <span class="session-log-count" id="sessionLogCount">0</span>
+                  <button class="session-log-clear pop-btn" id="sessionLogClear" title="Clear all session history">clear</button>
+                </div>
+                <div id="sessionLog" class="session-log-list"></div>
+              </div>
+
+            </div><!-- /pomo-col -->
+
+            <!-- Right column: todo card -->
+            <div class="todo-col">
+              <div class="todo-card" id="todoCard">
+                <div class="todo-header">tasks</div>
+                <div class="todo-input-wrap">
+                  <input type="color" id="todoColor" value="#e07878" title="Subject Color">
+                  <input type="text" id="todoInput" placeholder="add subject..." autocomplete="off">
+                  <button id="todoAdd" class="pop-btn">+</button>
+                </div>
+                <div class="todo-list-scroll" id="todoList"></div>
+              </div>
+            </div><!-- /todo-col -->
+
+          </div><!-- /productivity-hub -->
+        </div><!-- /dashStudyPane -->
+
+        <!-- Terminal pane -->
+        <div class="dash-pane dash-pane--hidden" id="dashTerminalPane">
+          <div class="terminal" id="terminal">
+            <div class="terminal-header">
+              <div>
+                <span class="host" id="term-host">0bsidian-bit</span>
+                <span class="badge" id="term-badge">~ · zsh</span>
+              </div>
+            </div>
+            <div class="terminal-body" id="body">
+              <div id="output"></div>
+              <div class="turnstile-wrap" id="turnstileWrap">
+                <div id="turnstileWidget"></div>
+              </div>
+              <div class="input-line">
+                <span class="prompt" id="term-prompt">&gt;</span>
+                <div id="cmd-input" class="cmd-input" contenteditable="true" spellcheck="false" autocapitalize="none" autocorrect="off" enterkeyhint="go" role="textbox" aria-label="Terminal command input" aria-multiline="false" data-gramm="false"></div>
+                <span class="caret" id="caret"></span>
+              </div>
             </div>
           </div>
-          <div class="terminal-body" id="body">
-            <div id="output"></div>
-            <div class="turnstile-wrap" id="turnstileWrap">
-              <div id="turnstileWidget"></div>
-            </div>
-            <div class="input-line">
-              <span class="prompt" id="term-prompt">&gt;</span>
-              <div id="cmd-input" class="cmd-input" contenteditable="true" spellcheck="false" autocapitalize="none" autocorrect="off" enterkeyhint="go" role="textbox" aria-label="Terminal command input" aria-multiline="false" data-gramm="false"></div>
-              <span class="caret" id="caret"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        </div><!-- /dashTerminalPane -->
+
+      </div><!-- /dashboard-layout -->
+    </div><!-- /hero -->
 
     <div class="tailscale-overlay overlay" id="tailscaleOverlay" aria-hidden="true" aria-modal="true" role="dialog">
       <div class="contact-panel">
@@ -294,7 +313,7 @@
     </div>
 
     <div class="footer">
-      <a href="#" id="footerContactLink" class="footer-contact">Dr. Lokesh Tewari</a>
+      <a href="#" id="footerContactLink" class="footer-contact">get in touch</a>
       <span>·</span> india <span>·</span>
       <span id="footerYear"></span>
       <span>·</span>
@@ -303,11 +322,6 @@
     <div class="privacy-footer" id="privacyFooter">
       privacy-first. no analytics, no trackers. tasks and chats live only in your browser.
     </div>
-  </div>
-
-  <div class="study-companion" id="studyCompanion">
-    <div class="speech-bubble" id="companionSpeech"></div>
-    <div class="companion-art" id="companionArt"></div>
   </div>
 
   <button class="install-hint pop-btn" id="installHint" hidden>install app</button>

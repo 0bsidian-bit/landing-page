@@ -76,7 +76,10 @@ html, body {
   text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  /* Use clip instead of hidden — 'hidden' creates a scroll container that
+     breaks position:fixed on iOS Safari. 'clip' prevents overflow without
+     creating a new scroll context. */
+  overflow-x: clip;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -126,6 +129,14 @@ body::after {
   color: var(--fg-dim);
   letter-spacing: 0.02em;
   animation: fadeIn 0.8s ease 0.1s both;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(14, 14, 14, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  margin: -32px -40px 32px;
+  padding: 16px 40px;
 }
 
 .monogram {
@@ -679,6 +690,111 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   letter-spacing: 0.1em;
 }
 
+/* ── Dash tab bar ─────────────────────────────────────────────────────────── */
+
+.dash-tab-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.dash-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(240, 238, 230, 0.04);
+  padding: 4px;
+  border-radius: 99px;
+  border: 1px solid var(--term-divider);
+}
+
+.dash-tab {
+  background: transparent;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--term-dimmer);
+  padding: 7px 20px;
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: lowercase;
+  letter-spacing: 0.03em;
+  touch-action: manipulation;
+}
+
+.dash-tab.active {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.dash-tab:not(.active):hover {
+  color: var(--term-fg);
+  background: rgba(240, 238, 230, 0.06);
+}
+
+.dash-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Dash panes ───────────────────────────────────────────────────────────── */
+
+.dash-pane {
+  width: 100%;
+}
+
+.dash-pane--hidden {
+  display: none !important;
+}
+
+/* ── Column wrappers inside productivity-hub ─────────────────────────────── */
+
+.pomo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.todo-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.todo-col .todo-card {
+  flex: 1;
+}
+
+/* ── Session log card (standalone below pomodoro) ────────────────────────── */
+
+.session-log-card {
+  width: 100%;
+  background: var(--term-bg);
+  border-radius: 14px;
+  padding: 18px 24px;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.3s ease;
+  font-family: var(--font-mono);
+}
+
+.session-log-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* touch-action: manipulation on all interactive elements prevents double-tap zoom on mobile */
+button, [role="button"], .todo-item, .todo-subject-header, input, textarea, select, a {
+  touch-action: manipulation;
+}
+
 /* Turnstile widget */
 .turnstile-wrap {
   display: flex;
@@ -757,6 +873,9 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   .productivity-hub.fullscreen {
     grid-template-columns: 1fr;
     max-width: 600px;
+  }
+  .todo-col .todo-card {
+    min-height: auto;
   }
 }
 
@@ -1494,37 +1613,36 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 /* ── Study Companion ──────────────────────────────────────────────────────── */
 
 .study-companion {
-  position: fixed;
-  top: 80px;
-  right: 32px;
-  z-index: 5;
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
   pointer-events: auto;
+  cursor: pointer;
 }
 
 .speech-bubble {
   background: var(--term-bg);
   border: 1px solid var(--term-divider);
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 12px;
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--term-fg);
   box-shadow: var(--shadow-hover);
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(-6px);
   transition: opacity 0.3s, transform 0.3s;
   pointer-events: none;
-  max-width: 220px;
-  text-align: center;
+  max-width: 200px;
+  text-align: left;
   line-height: 1.4;
   position: absolute;
-  bottom: 100%;
-  margin-bottom: 8px;
+  top: 0;
+  left: calc(100% + 10px);
+  white-space: normal;
+  z-index: 30;
 }
 
 .speech-bubble.show {
@@ -1532,16 +1650,21 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   transform: translateY(0);
 }
 
+
 .companion-art {
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1.1;
+  font-size: 7.5px;
+  line-height: 1.15;
   white-space: pre;
-  filter: drop-shadow(0 0 16px rgba(232, 144, 120, 0.3));
-  cursor: pointer;
+  filter: drop-shadow(0 0 10px rgba(232, 144, 120, 0.35));
   user-select: none;
-  pointer-events: auto; /* Allow direct clicking of the pet */
+  pointer-events: auto;
+  transition: filter 0.3s ease;
+}
+
+.companion-art:hover {
+  filter: drop-shadow(0 0 14px rgba(232, 144, 120, 0.6));
 }
 
 @keyframes critterBob {
@@ -1559,6 +1682,10 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 @media (max-width: 800px) {
   .page {
     padding: 16px 12px;
+  }
+  .topbar {
+    margin: -16px -12px 16px;
+    padding: 12px 16px;
   }
   
   .hero {
@@ -1630,6 +1757,20 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
     padding: 4px 10px;
   }
 
+  .dash-tab {
+    font-size: 11px;
+    padding: 6px 14px;
+  }
+
+  .dash-tab-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .session-log-card {
+    padding: 14px 16px;
+  }
+
   .pomodoro-card,
   .todo-card {
     min-height: auto;
@@ -1689,8 +1830,12 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
     font-size: 13px;
   }
 
+  /* Prevent iOS zoom-on-focus: all inputs must be ≥16px on mobile */
+  input, textarea, select, [contenteditable] {
+    font-size: 16px !important;
+  }
+
   .todo-input-wrap input[type="text"] {
-    font-size: 12px;
     padding: 6px 10px;
   }
 
@@ -1716,13 +1861,8 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
     height: 14px;
   }
 
-  .study-companion {
-    bottom: 12px;
-    right: 12px;
-  }
-
   .companion-art {
-    font-size: 9px;
+    font-size: 7px;
   }
 
   .speech-bubble {
@@ -1803,10 +1943,7 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
     display: none;
   }
 
-  .study-companion {
-    transform: scale(0.85);
-    transform-origin: bottom right;
-  }
+  /* companion is now in topbar — no extra scaling needed */
 }
 
 /* ── Tailscale overlay ──────────────────────────────────────────────────────── */
@@ -2138,14 +2275,6 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 .study-companion {
   transition: opacity 0.3s;
 }
-.study-companion[data-side="right"] .speech-bubble {
-  right: 0;
-  left: auto;
-}
-.study-companion[data-side="left"] .speech-bubble {
-  left: 0;
-  right: auto;
-}
 
 .companion-art[data-effect="flash"] { animation: cx-flash 600ms ease; }
 .companion-art[data-effect="blur-dash"] { animation: cx-blurdash 500ms ease; }
@@ -2214,36 +2343,43 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   background: var(--bg);
   z-index: 80;
   max-width: none;
-  padding: 24px;
-  gap: 20px;
-  overflow: auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr auto;
+  padding: 24px 32px;
+  gap: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
 }
-.dashboard-layout.fullscreen .productivity-hub {
-  grid-column: 1;
-  grid-row: 1;
-  grid-template-columns: 1fr 1fr;
+
+.dashboard-layout.fullscreen .dash-pane:not(.dash-pane--hidden) {
+  flex: 1;
+  min-height: 0;
 }
+
+.dashboard-layout.fullscreen .productivity-hub {
+  height: 100%;
+  align-items: stretch;
+}
+
 .dashboard-layout.fullscreen .terminal {
-  grid-column: 2;
-  grid-row: 1;
   max-width: none;
   height: 100%;
+  min-height: 500px;
 }
-.dashboard-layout.fullscreen .section-divider {
-  grid-column: 1 / -1;
-  grid-row: 2;
+
+.dashboard-layout.fullscreen .pomo-circle-wrap {
+  width: clamp(200px, 24vw, 280px);
+  height: clamp(200px, 24vw, 280px);
 }
+
+.dashboard-layout.fullscreen .pomo-time {
+  font-size: 44px;
+}
+
 @media (max-width: 900px) {
   .dashboard-layout.fullscreen {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
+    padding: 16px;
   }
-  .dashboard-layout.fullscreen .productivity-hub,
-  .dashboard-layout.fullscreen .terminal { grid-column: 1; grid-row: auto; }
 }
 
 /* ── Mobile topbar/hero gap + polish ─────────────────────────────────────── */
@@ -2255,7 +2391,9 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   .chat-scroll-btn { display: none; }
   .hub-fs-label { display: none; }
   .login-pill { padding: 5px 12px; font-size: 11px; }
-  .hub-controls { position: static; margin-bottom: 10px; }
   .install-hint { bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .dash-tab-bar { gap: 6px; }
+  .dash-bar-right { gap: 6px; }
 }
+
 
