@@ -9,8 +9,7 @@ const CONFIG = {
   MAX_PROMPT_LENGTH: 2000,
   MAX_BODY_BYTES: 16384,
   MAX_HISTORY_TURNS: 10,
-  AI_MODEL: "@cf/openai/gpt-oss-120b",
-  AI_MODEL_FALLBACK: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  AI_MODEL: "@@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   ALLOWED_ORIGIN: "https://lokeshtewari.uk"
 };
 
