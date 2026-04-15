@@ -679,6 +679,111 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   letter-spacing: 0.1em;
 }
 
+/* ── Dash tab bar ─────────────────────────────────────────────────────────── */
+
+.dash-tab-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.dash-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(240, 238, 230, 0.04);
+  padding: 4px;
+  border-radius: 99px;
+  border: 1px solid var(--term-divider);
+}
+
+.dash-tab {
+  background: transparent;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--term-dimmer);
+  padding: 7px 20px;
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: lowercase;
+  letter-spacing: 0.03em;
+  touch-action: manipulation;
+}
+
+.dash-tab.active {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.dash-tab:not(.active):hover {
+  color: var(--term-fg);
+  background: rgba(240, 238, 230, 0.06);
+}
+
+.dash-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Dash panes ───────────────────────────────────────────────────────────── */
+
+.dash-pane {
+  width: 100%;
+}
+
+.dash-pane--hidden {
+  display: none !important;
+}
+
+/* ── Column wrappers inside productivity-hub ─────────────────────────────── */
+
+.pomo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.todo-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.todo-col .todo-card {
+  flex: 1;
+}
+
+/* ── Session log card (standalone below pomodoro) ────────────────────────── */
+
+.session-log-card {
+  width: 100%;
+  background: var(--term-bg);
+  border-radius: 14px;
+  padding: 18px 24px;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.3s ease;
+  font-family: var(--font-mono);
+}
+
+.session-log-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* touch-action: manipulation on all interactive elements prevents double-tap zoom on mobile */
+button, [role="button"], .todo-item, .todo-subject-header, input, textarea, select, a {
+  touch-action: manipulation;
+}
+
 /* Turnstile widget */
 .turnstile-wrap {
   display: flex;
@@ -757,6 +862,9 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   .productivity-hub.fullscreen {
     grid-template-columns: 1fr;
     max-width: 600px;
+  }
+  .todo-col .todo-card {
+    min-height: auto;
   }
 }
 
@@ -1496,7 +1604,8 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 .study-companion {
   position: fixed;
   top: 80px;
-  right: 32px;
+  left: 24px;
+  right: auto;
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -1519,11 +1628,12 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   transform: translateY(10px);
   transition: opacity 0.3s, transform 0.3s;
   pointer-events: none;
-  max-width: 220px;
-  text-align: center;
+  max-width: 200px;
+  text-align: left;
   line-height: 1.4;
   position: absolute;
   bottom: 100%;
+  left: 0;
   margin-bottom: 8px;
 }
 
@@ -1630,6 +1740,20 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
     padding: 4px 10px;
   }
 
+  .dash-tab {
+    font-size: 11px;
+    padding: 6px 14px;
+  }
+
+  .dash-tab-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .session-log-card {
+    padding: 14px 16px;
+  }
+
   .pomodoro-card,
   .todo-card {
     min-height: auto;
@@ -1689,8 +1813,12 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
     font-size: 13px;
   }
 
+  /* Prevent iOS zoom-on-focus: all inputs must be ≥16px on mobile */
+  input, textarea, select, [contenteditable] {
+    font-size: 16px !important;
+  }
+
   .todo-input-wrap input[type="text"] {
-    font-size: 12px;
     padding: 6px 10px;
   }
 
@@ -2214,36 +2342,43 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   background: var(--bg);
   z-index: 80;
   max-width: none;
-  padding: 24px;
-  gap: 20px;
-  overflow: auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr auto;
+  padding: 24px 32px;
+  gap: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
 }
-.dashboard-layout.fullscreen .productivity-hub {
-  grid-column: 1;
-  grid-row: 1;
-  grid-template-columns: 1fr 1fr;
+
+.dashboard-layout.fullscreen .dash-pane:not(.dash-pane--hidden) {
+  flex: 1;
+  min-height: 0;
 }
+
+.dashboard-layout.fullscreen .productivity-hub {
+  height: 100%;
+  align-items: stretch;
+}
+
 .dashboard-layout.fullscreen .terminal {
-  grid-column: 2;
-  grid-row: 1;
   max-width: none;
   height: 100%;
+  min-height: 500px;
 }
-.dashboard-layout.fullscreen .section-divider {
-  grid-column: 1 / -1;
-  grid-row: 2;
+
+.dashboard-layout.fullscreen .pomo-circle-wrap {
+  width: clamp(200px, 24vw, 280px);
+  height: clamp(200px, 24vw, 280px);
 }
+
+.dashboard-layout.fullscreen .pomo-time {
+  font-size: 44px;
+}
+
 @media (max-width: 900px) {
   .dashboard-layout.fullscreen {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
+    padding: 16px;
   }
-  .dashboard-layout.fullscreen .productivity-hub,
-  .dashboard-layout.fullscreen .terminal { grid-column: 1; grid-row: auto; }
 }
 
 /* ── Mobile topbar/hero gap + polish ─────────────────────────────────────── */
@@ -2255,7 +2390,9 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   .chat-scroll-btn { display: none; }
   .hub-fs-label { display: none; }
   .login-pill { padding: 5px 12px; font-size: 11px; }
-  .hub-controls { position: static; margin-bottom: 10px; }
   .install-hint { bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .dash-tab-bar { gap: 6px; }
+  .dash-bar-right { gap: 6px; }
 }
+
 
