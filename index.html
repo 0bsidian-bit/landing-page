@@ -21,9 +21,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="0bsidian">
-<link rel="stylesheet" href="/styles.css?v=7">
+<link rel="stylesheet" href="/styles.css?v=8">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script src="/app.js?v=6" defer></script>
+<script src="/app.js?v=7" defer></script>
 </head>
 <body>
 <div class="page">
@@ -58,7 +58,8 @@
         <div class="dash-tab-bar">
           <div class="dash-tabs">
             <button class="dash-tab active" data-tab="study">study</button>
-            <button class="dash-tab" data-tab="terminal">terminal</button>
+            <button class="dash-tab" data-tab="terminal">chat</button>
+            <button class="dash-tab" data-tab="whats-new">What's New 🎉</button>
           </div>
           <div class="dash-bar-right">
             <div class="studying-now" id="studyingNow" title="Active study sessions right now">
@@ -183,24 +184,35 @@
         <!-- Chat pane -->
         <div class="dash-pane dash-pane--hidden" id="dashTerminalPane">
           <div class="chat-pane" id="chatPane">
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-turnstile-wrap" id="chatTurnstileWrap">
-              <div id="chatTurnstileWidget"></div>
+            <div class="chat-main">
+              <div class="chat-messages" id="chatMessages"></div>
+              <div class="chat-turnstile-wrap" id="chatTurnstileWrap">
+                <div id="chatTurnstileWidget"></div>
+              </div>
+              <div class="chat-input-bar">
+                <input type="text" class="chat-input" id="chatInput"
+                       placeholder="type to chat…" autocomplete="off"
+                       autocapitalize="sentences" spellcheck="true"
+                       enterkeyhint="send" aria-label="Chat message" disabled>
+                <button class="chat-send-btn pop-btn" id="chatSendBtn" title="Send"></button>
+              </div>
             </div>
-            <div class="chat-input-bar">
-              <button class="chat-menu-btn pop-btn" id="chatMenuBtn" title="Options">···</button>
-              <input type="text" class="chat-input" id="chatInput"
-                     placeholder="type to chat…" autocomplete="off"
-                     autocapitalize="sentences" spellcheck="true"
-                     enterkeyhint="send" aria-label="Chat message" disabled>
-              <button class="chat-send-btn pop-btn" id="chatSendBtn" title="Send"></button>
-            </div>
-            <div class="chat-menu-dropdown" id="chatMenuDropdown">
-              <button class="chat-menu-item" id="chatForget">clear memory</button>
-              <button class="chat-menu-item" id="chatClear">clear chat</button>
+            <div class="chat-sidebar" id="chatSidebar">
+              <button class="chat-sidebar-new pop-btn" id="chatNewThread">+ new chat</button>
+              <div class="chat-sidebar-threads" id="chatThreadList"></div>
+              <button class="chat-sidebar-clear pop-btn" id="chatClearAll">clear all</button>
             </div>
           </div>
         </div><!-- /dashTerminalPane -->
+
+        <!-- What's New pane -->
+        <div class="dash-pane dash-pane--hidden" id="dashWhatsNewPane">
+          <div class="whats-new-pane">
+            <div class="whats-new-content" id="whatsNewContent">
+              <p class="whats-new-loading">loading…</p>
+            </div>
+          </div>
+        </div><!-- /dashWhatsNewPane -->
 
       </div><!-- /dashboard-layout -->
     </div><!-- /hero -->
@@ -225,6 +237,31 @@
         <div class="confirm-actions">
           <button class="confirm-btn confirm-cancel" id="confirmCancel">cancel</button>
           <button class="confirm-btn confirm-yes" id="confirmYes">yes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="break-tag-overlay overlay" id="breakTagOverlay" aria-hidden="true" aria-modal="true" role="dialog">
+      <div class="contact-panel break-tag-panel">
+        <p class="contact-title">what kind of break?</p>
+        <div class="break-duration-row">
+          <span id="breakDurationText">break</span>
+          <span class="break-info-icon" title="Duration of this break phase">⊘</span>
+        </div>
+        <div class="break-tag-grid" id="breakTagGrid"></div>
+        <div class="overlay-actions">
+          <button class="contact-submit" id="breakTagEdit">edit tags</button>
+          <button class="contact-submit" id="breakTagSkip">don't record</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="subjectSelectOverlay" aria-hidden="true" aria-modal="true" role="dialog">
+      <div class="contact-panel">
+        <p class="contact-title">what are you studying?</p>
+        <div class="subject-select-list" id="subjectSelectList"></div>
+        <div class="overlay-actions">
+          <button class="contact-submit" id="subjectSelectSkip">skip →</button>
         </div>
       </div>
     </div>
@@ -265,11 +302,10 @@
       <div class="contact-panel">
         <p class="contact-title">privacy</p>
         <div class="privacy-body">
-          <p><strong>0bsidian stores nothing about you on our servers.</strong></p>
-          <p>Tasks, timers, chat history, and buddy choice live only in your browser's <code>localStorage</code>. Clearing site data wipes everything.</p>
-          <p>Chat requests go to Cloudflare Workers AI over HTTPS and are not logged by us. Ephemeral KV entries (rate-limit buckets keyed by IP, a 90-second "studying now" heartbeat, and a 30-minute Turnstile verification flag) expire on their own. No PII, no analytics, no trackers, no cookies beyond what Turnstile requires for bot prevention.</p>
-          <p>Source code is public on GitHub — audit it yourself.</p>
-          <p class="privacy-summary-line">privacy-first. no analytics, no trackers. tasks and chats live only in your browser.</p>
+          <p><strong>0bsidian stores nothing about you on our servers.</strong> Tasks, timers, and chat history live only in your browser's <code>localStorage</code>.</p>
+          <p>Chat requests go to Cloudflare Workers AI over HTTPS. Ephemeral KV entries (rate-limit, heartbeat, Turnstile flag) expire automatically. No PII, no analytics, no trackers.</p>
+          <p>Source code is <a href="https://github.com/0bsidian-bit/landing-page" target="_blank" rel="noopener" style="color:var(--accent)">public on GitHub</a>.</p>
+          <p class="privacy-summary-line">privacy-first · no trackers · your data never leaves your browser</p>
         </div>
         <div class="overlay-actions">
           <button class="contact-submit contact-submit-primary" id="privacyClose">close</button>
@@ -289,10 +325,22 @@
       </div>
     </div>
 
+    <div class="overlay" id="devContactOverlay" aria-hidden="true" aria-modal="true" role="dialog">
+      <div class="contact-panel">
+        <p class="contact-title">Dr. Lokesh Tewari</p>
+        <p style="font-family:var(--font-mono);font-size:12px;color:var(--term-dim);margin-bottom:18px">
+          working physician · homelab tinkerer · maker of 0bsidian
+        </p>
+        <div class="overlay-actions">
+          <button class="contact-submit" id="devContactGetInTouch">get in touch →</button>
+          <button class="contact-submit contact-submit-primary" id="devContactGithub">GitHub →</button>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">
       <a href="#" id="footerContactLink" class="footer-contact">get in touch</a>
-      <span>·</span> <a href="#" id="footerDevName" class="footer-link">Dr. Lokesh Tewari</a> <span>·</span>
-      <span id="footerYear"></span>
+      <span>·</span> <a href="#" id="footerDevName" class="footer-link">Dr. Lokesh Tewari</a>
       <span>·</span>
       <a href="#" id="footerPrivacyLink" class="footer-link">privacy</a>
     </div>

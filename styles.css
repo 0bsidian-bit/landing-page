@@ -318,7 +318,7 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
 
 .name:hover {
   transform: scale(1.02);
-  text-shadow: 0 4px 24px rgba(212, 121, 90, 0.15);
+  text-shadow: 0 0 20px rgba(212, 121, 90, 0.6), 0 4px 24px rgba(212, 121, 90, 0.2);
 }
 
 .chat-scroll-btn {
@@ -809,7 +809,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
 .productivity-hub {
   display: grid;
-  grid-template-columns: 1fr minmax(240px, 280px);
+  grid-template-columns: 62fr 38fr;
   gap: 24px;
   width: 100%;
   align-items: stretch;
@@ -884,15 +884,92 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 .chat-pane {
   position: relative;
   width: 100%;
-  max-width: 800px;
+  max-width: 900px;
   height: 460px;
   background: var(--term-bg);
   border-radius: 14px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   overflow: hidden;
   box-shadow: var(--shadow);
 }
+
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--term-divider);
+}
+
+.chat-sidebar {
+  width: 196px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 8px;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.015);
+  overflow: hidden;
+}
+
+.chat-sidebar-new {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: center;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+.chat-sidebar-new:hover { opacity: 0.85; }
+
+.chat-sidebar-threads {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--term-scrollbar) transparent;
+}
+
+.chat-thread-item {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--term-dimmer);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 7px 8px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.15s;
+  width: 100%;
+}
+.chat-thread-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--term-fg); }
+.chat-thread-item.active { background: rgba(212, 121, 90, 0.12); color: var(--accent); }
+
+.chat-sidebar-clear {
+  background: transparent;
+  border: 1px solid var(--term-divider);
+  border-radius: 6px;
+  color: var(--term-dimmer);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 6px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.chat-sidebar-clear:hover { color: var(--fg); border-color: var(--fg-dimmer); }
 
 .chat-messages {
   flex: 1;
@@ -927,6 +1004,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   background: rgba(255, 255, 255, 0.05);
   color: var(--term-fg);
   border-bottom-left-radius: 4px;
+  font-family: var(--font-serif);
 }
 
 .chat-msg--system {
@@ -992,8 +1070,8 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   border: 1px solid var(--term-divider);
   border-radius: 20px;
   color: var(--term-fg);
-  font-family: var(--font-serif);
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
   padding: 8px 14px;
   outline: none;
   transition: border-color 0.2s;
@@ -1019,53 +1097,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 .chat-send-btn:hover { transform: scale(1.05); }
 .chat-send-btn:active { transform: scale(0.95); }
 
-.chat-menu-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--term-divider);
-  background: transparent;
-  color: var(--term-dimmer);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 14px;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
-  transition: all 0.2s;
-}
-.chat-menu-btn:hover { color: var(--term-fg); border-color: var(--term-fg); }
-
-.chat-menu-dropdown {
-  position: absolute;
-  background: var(--term-bg);
-  border: 1px solid var(--term-divider);
-  border-radius: 8px;
-  padding: 4px;
-  display: none;
-  z-index: 20;
-  bottom: 58px;
-  left: 12px;
-  box-shadow: var(--shadow);
-  min-width: 130px;
-}
-.chat-menu-dropdown.open { display: block; }
-.chat-menu-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: none;
-  color: var(--term-dimmer);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 7px 12px;
-  cursor: pointer;
-  border-radius: 5px;
-  white-space: nowrap;
-}
-.chat-menu-item:hover { background: rgba(255,255,255,0.06); color: var(--term-fg); }
+/* chat-menu-btn and chat-menu-dropdown removed — replaced by .chat-sidebar */
 
 .terminal {
   width: 100%;
@@ -1367,15 +1399,21 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
 .pomo-settings-menu {
   display: none;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--term-divider);
-  border-radius: 10px;
+  position: absolute;
+  top: 68px;
+  left: 12px;
+  right: 12px;
+  z-index: 30;
+  background: rgba(14, 14, 14, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(240, 237, 232, 0.10);
+  border-radius: 12px;
   padding: 14px 16px;
-  margin-bottom: 20px;
   font-size: 12px;
   font-family: var(--font-mono);
   text-align: left;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 .pomo-settings-menu.open { display: block; }
 
@@ -1975,6 +2013,9 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 /* (legacy pomo stats removed — now covered by .pomo-cycles-wrap) */
 
 @media (max-width: 800px) {
+  .chat-sidebar { display: none; }
+  .chat-main { border-right: none; }
+
   .page {
     padding: 16px 12px;
   }
@@ -2701,4 +2742,128 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   .dash-bar-right { gap: 6px; }
 }
 
+/* ── Contextual settings (hidden outside study tab) ─────────────────────── */
+.settings-hidden #pomoSettingsBtn,
+.settings-hidden #pomoSound {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
 
+/* ── Break Tag Modal ─────────────────────────────────────────────────────── */
+.break-tag-panel { max-width: 340px; }
+.break-duration-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: var(--term-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.break-info-icon { color: var(--term-dimmer); cursor: help; }
+.break-tag-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.break-tag-btn {
+  background: rgba(240, 238, 230, 0.04);
+  border: 1px solid var(--term-divider);
+  border-radius: 8px;
+  color: var(--term-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.break-tag-btn:hover, .break-tag-btn.selected {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* ── Subject Select Modal ────────────────────────────────────────────────── */
+.subject-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.subject-select-btn {
+  background: rgba(240, 238, 230, 0.04);
+  border: 1px solid var(--term-divider);
+  border-radius: 8px;
+  color: var(--term-fg);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  width: 100%;
+}
+.subject-select-btn:hover { border-color: var(--accent); background: rgba(212, 121, 90, 0.08); }
+.subject-select-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── What's New Pane ─────────────────────────────────────────────────────── */
+.whats-new-pane {
+  width: 100%;
+  max-width: 800px;
+  min-height: 360px;
+  background: var(--term-bg);
+  border-radius: 14px;
+  padding: 28px 32px;
+  box-shadow: var(--shadow);
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--term-fg);
+  overflow-y: auto;
+}
+.whats-new-content h1 {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--fg);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  margin: 0 0 16px;
+}
+.whats-new-content h2 {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  margin: 20px 0 8px;
+  border-bottom: 1px solid var(--term-divider);
+  padding-bottom: 4px;
+}
+.whats-new-content h3 {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-dim);
+  margin: 14px 0 6px;
+}
+.whats-new-content p { margin-bottom: 8px; }
+.whats-new-content strong { color: var(--accent-soft); }
+.whats-new-content ul { padding-left: 18px; margin-bottom: 8px; }
+.whats-new-content li { margin-bottom: 4px; }
+.whats-new-content hr { border: none; border-top: 1px solid var(--term-divider); margin: 16px 0; }
+.whats-new-loading {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--term-dimmer);
+  font-style: italic;
+}
+
+/* ── Turnstile dark mode ─────────────────────────────────────────────────── */
+#chatTurnstileWidget iframe { color-scheme: dark; border-radius: 8px; }
