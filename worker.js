@@ -9,7 +9,7 @@ const CONFIG = {
   MAX_PROMPT_LENGTH: 2000,
   MAX_BODY_BYTES: 16384,
   MAX_HISTORY_TURNS: 10,
-  AI_MODEL: "@@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  AI_MODEL: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   ALLOWED_ORIGIN: "https://lokeshtewari.uk"
 };
 
@@ -110,14 +110,6 @@ class HttpUtils {
   }
 }
 
-async function runAI(env, messages, maxTokens = 512) {
-  try {
-    return await env.AI.run(CONFIG.AI_MODEL, { messages, max_tokens: maxTokens, temperature: 0.3 });
-  } catch (err) {
-    return await env.AI.run(CONFIG.AI_MODEL_FALLBACK, { messages, max_tokens: maxTokens, temperature: 0.3 });
-  }
-}
-
 class ApiController {
 
   static async handleAsk(request, env, corsHeaders) {
@@ -180,15 +172,21 @@ class ApiController {
         return HttpUtils.jsonResponse({ error: "Rate limit exceeded" }, 429, { ...corsHeaders, "Retry-After": "60" });
       }
 
-      const response = await runAI(env, [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...sanitizedMessages,
-      ]);
+      const result = await env.AI.run(CONFIG.AI_MODEL, {
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...sanitizedMessages,
+        ],
+        max_tokens: 512,
+        temperature: 0.3,
+      });
 
-      return HttpUtils.jsonResponse({ response: response.response }, 200, corsHeaders);
+      const aiText = result?.response || result?.result?.response || "";
+      if (!aiText) return HttpUtils.jsonResponse({ error: "Empty AI response" }, 500, corsHeaders);
+      return HttpUtils.jsonResponse({ response: aiText }, 200, corsHeaders);
     } catch (err) {
       if (err.message === "Payload Too Large") return HttpUtils.jsonResponse({ error: "Request too large" }, 413, corsHeaders);
-      return HttpUtils.jsonResponse({ error: "Failed to process request" }, 400, corsHeaders);
+      return HttpUtils.jsonResponse({ error: "AI unavailable" }, 503, corsHeaders);
     }
   }
 
@@ -217,13 +215,14 @@ class ApiController {
       const taskLine = topTasks ? ` Their pending tasks: ${topTasks}.` : "";
       const prompt = `You are a tiny desktop pet named ${name} with a "${personality}" personality. The user is in ${mode} mode. Stats: ${stats}.${taskLine} Say ONE in-character line (max 14 words) that reflects your personality and nudges them kindly. No quotes. No emoji spam.`;
 
-      const response = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
         messages: [{ role: "user", content: prompt }]
       });
 
-      return HttpUtils.jsonResponse({ response: response.response }, 200, corsHeaders);
+      const text = result?.response || result?.result?.response || "";
+      return HttpUtils.jsonResponse({ response: text || "..." }, 200, corsHeaders);
     } catch {
-      return HttpUtils.jsonResponse({ error: "Failed" }, 400, corsHeaders);
+      return HttpUtils.jsonResponse({ error: "Failed" }, 503, corsHeaders);
     }
   }
 
