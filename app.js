@@ -756,7 +756,7 @@ class PomodoroTimer {
     if (!isFs) {
       layout.classList.add('fullscreen');
       this.updateFullscreenLabel(true);
-      layout.requestFullscreen?.().catch(() => {});
+      document.documentElement.requestFullscreen?.().catch(() => {});
     } else {
       layout.classList.remove('fullscreen');
       this.updateFullscreenLabel(false);
@@ -1823,7 +1823,7 @@ class TerminalApp {
   loadWhatsNew() {
     const container = document.getElementById('whatsNewContent');
     if (!container) return;
-    fetch('https://raw.githubusercontent.com/0bsidian-bit/landing-page/main/updates.md')
+    fetch('/updates.md')
       .then(r => r.ok ? r.text() : Promise.reject(r.status))
       .then(md => { container.innerHTML = this._renderMarkdown(md); })
       .catch(err => {

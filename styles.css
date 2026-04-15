@@ -914,19 +914,19 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 }
 
 .chat-sidebar-new {
-  background: var(--accent);
-  color: var(--bg);
-  border: none;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid rgba(212, 121, 90, 0.45);
   border-radius: 8px;
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 8px 10px;
+  font-size: 13px;
+  padding: 9px 10px;
   cursor: pointer;
   text-align: center;
   flex-shrink: 0;
-  transition: opacity 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
-.chat-sidebar-new:hover { opacity: 0.85; }
+.chat-sidebar-new:hover { background: rgba(212, 121, 90, 0.1); border-color: var(--accent); }
 
 .chat-sidebar-threads {
   flex: 1;
@@ -942,10 +942,10 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--term-dimmer);
+  color: var(--term-dim);
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 7px 8px;
+  font-size: 13px;
+  padding: 8px 10px;
   cursor: pointer;
   text-align: left;
   white-space: nowrap;
@@ -963,8 +963,8 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   border-radius: 6px;
   color: var(--term-dimmer);
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 6px 8px;
+  font-size: 12px;
+  padding: 7px 8px;
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.15s;
@@ -1251,6 +1251,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   flex-direction: column;
   gap: 10px;
   align-items: center;
+  position: relative;
 }
 
 .pomo-circle-wrap {
@@ -1400,11 +1401,11 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 .pomo-settings-menu {
   display: none;
   position: absolute;
-  top: 68px;
-  right: 12px;
-  width: 190px;
+  bottom: 0;
+  right: calc(100% + 10px);
+  width: 170px;
   z-index: 30;
-  background: rgba(14, 14, 14, 0.92);
+  background: rgba(14, 14, 14, 0.95);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(240, 237, 232, 0.10);
