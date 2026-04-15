@@ -8,29 +8,37 @@ Built entirely on Cloudflare — no frameworks, no build step, just clean code.
 
 ## What It Does
 
-### AI Chat Terminal
-A fully interactive AI assistant powered by Cloudflare Workers AI (`gpt-oss-120b`, llama-3.3-70b fallback). Type naturally in the terminal — supports conversational history, `/model`, `/privacy`, and other commands.
+### Two Timer Modes
 
-### Pomodoro Timer
-Circular timer with work and break modes, cycle tracking, rename-able timers, and hover-reveal cycle names. Persists state across page refresh via wall-clock. Auto-advances to the next cycle on completion. Single fullscreen focus-mode toggle expands the entire dashboard.
+**Focus Mode (default)** — counts up from zero. Press play to start focusing; press pause to automatically begin a break countdown (also counting up from zero). Press play again to end the break and start a new focus session. Both focus and break durations are logged to the session history.
 
-### Task Manager
-Organize work by subject with colour coding. Tasks auto-save to localStorage. Integrates with the Study Buddy to surface pending tasks.
+**Pomodoro Mode** — classic countdown timer with a circular progress ring. Focus and rest periods only (no long break). Timer name is editable by clicking directly on it.
+
+Both modes support inline timer rename, a master sound toggle, and warn before the tab is closed if the timer is running.
+
+### iMessage-Style AI Chat
+Conversational AI chat powered by Cloudflare Workers AI (`llama-3.1-8b`). Messages appear as styled bubbles — user on the right, AI on the left. Memory persists across sessions via localStorage. Use the menu to clear memory or clear the chat.
 
 ### Study Buddy
-A desktop companion that pins to the left or right edge of the screen. Teleports with per-buddy CSS effects (flash, blur-dash, fade, shimmer, pixelate, confetti-poof, ember, glitch, ripple, lightning). Personality archetypes drive behaviour — clingy buddies track your cursor, shy ones flee, chaotic ones jump randomly, stoic ones barely move. Thoughts are personalised using your current task list and pomodoro stats. Silent during breaks.
+A desktop companion that lives in the top-left corner. 10 characters with productivity-archetype personalities (focused, strategic, calm, analytical, etc.). Thoughts are generated from your current task list and pomodoro stats. Appears below the ASCII art so speech is always readable.
+
+### Task Manager
+Organise work by subject with colour coding. Auto-saves to localStorage. Surfaces pending tasks to the Study Buddy.
+
+### Session Log
+Every completed focus or pomodoro session is logged with name, duration, and timestamp. Inline rename and delete. Up to 100 entries.
 
 ### People Studying Now
-Live counter showing how many people are currently active on the site. Updates every 30 s via heartbeat (90 s TTL in KV).
+Live counter showing active sessions on the site. Updates every 30 s via heartbeat (90 s TTL in KV).
 
-### Turnstile Protection
-Cloudflare Turnstile verifies the first chat request per IP — no CAPTCHA UX, just a seamless background check.
+### Developer Message
+Click **Dr. Lokesh Tewari** in the footer to read a message from the developer. Fetched live from `message.md` in this repo.
 
 ### Privacy First
-No analytics, no trackers, no cookies beyond Turnstile. Tasks, timers, chat history, and buddy choice live only in `localStorage`. KV entries (rate-limit buckets, study heartbeat, Turnstile flag) expire automatically. No PII stored.
+No analytics, no trackers, no cookies beyond Turnstile. Tasks, timers, chat history, and buddy choice live only in `localStorage`. KV entries expire automatically. No PII stored.
 
 ### PWA / Installable
-Ships a `manifest.webmanifest` and service worker for offline shell support. Installs as a standalone app on iOS and Android.
+Ships a `manifest.webmanifest` and service worker. Installs as a standalone app. The install prompt appears as a small icon in the topbar — only visible on browsers where the PWA is not already installed.
 
 ---
 
@@ -38,13 +46,13 @@ Ships a `manifest.webmanifest` and service worker for offline shell support. Ins
 
 | Feature | Details |
 |---|---|
-| AI Model | `@cf/openai/gpt-oss-120b` (llama-3.3-70b fallback) |
-| Timer Modes | Pomodoro (25 m), Short Break (5 m), Long Break (15 m) |
-| Timer Persistence | Survives page refresh; auto-advances cycles |
+| AI Model | `@cf/meta/llama-3.1-8b-instruct` (both chat and companion) |
+| Timer Modes | Focus (count-up) · Pomodoro (countdown + ring) |
+| Timer Persistence | Survives page refresh via wall-clock |
+| Sound | Master toggle in controls column; mechanical tick + bell |
+| Study Buddy | 10 characters, unique teleport effects, productivity personalities |
 | Security | Turnstile verification, rate limiting (10 req/min) |
-| Study Buddy | 10 characters, unique teleport effects, personality archetypes |
-| Contact | mailto: form (MX records untouched) |
-| Storage | All data in localStorage — nothing on our servers |
+| Storage | All data in localStorage — nothing on servers |
 
 ---
 

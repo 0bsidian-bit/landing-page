@@ -9,7 +9,7 @@ const CONFIG = {
   MAX_PROMPT_LENGTH: 2000,
   MAX_BODY_BYTES: 16384,
   MAX_HISTORY_TURNS: 10,
-  AI_MODEL: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  AI_MODEL: "@cf/meta/llama-3.1-8b-instruct",
   ALLOWED_ORIGIN: "https://lokeshtewari.uk"
 };
 

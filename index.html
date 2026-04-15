@@ -35,6 +35,7 @@
         </div>
       </div>
       <div class="topbar-right">
+        <button class="topbar-install-btn pop-btn" id="installHint" hidden title="Install app"></button>
         <a class="login-pill" id="loginPill" href="#" title="Private portal">login</a>
       </div>
     </div>
@@ -78,103 +79,67 @@
             <div class="pomo-col">
 
               <!-- Pomodoro Card -->
-              <div class="pomodoro-card" id="pomodoroCard">
-                <div class="pomo-header-flex">
-                  <div class="pomo-tabs">
-                    <button class="pomo-tab pop-btn active" data-mode="pomodoro">pomodoro</button>
-                    <button class="pomo-tab pop-btn" data-mode="shortBreak">short break</button>
-                    <button class="pomo-tab pop-btn" data-mode="longBreak">long break</button>
-                  </div>
-                  <button class="pomo-settings-btn pop-btn" id="pomoSettingsBtn" title="Settings">⚙</button>
+              <div class="pomodoro-card timer-mode--focus" id="pomodoroCard">
+
+                <!-- Mode switch: Focus | Pomodoro -->
+                <div class="timer-mode-switch">
+                  <button class="timer-mode-btn active" data-timer-mode="focus">focus</button>
+                  <button class="timer-mode-btn" data-timer-mode="pomodoro">pomodoro</button>
                 </div>
 
+                <!-- Pomodoro sub-tabs (only visible in pomodoro mode) -->
+                <div class="pomo-tabs pomo-subtabs" id="pomoSubtabs">
+                  <button class="pomo-tab pop-btn active" data-mode="pomodoro">focus</button>
+                  <button class="pomo-tab pop-btn" data-mode="shortBreak">rest</button>
+                </div>
+
+                <!-- Settings menu (streamlined) -->
                 <div class="pomo-settings-menu" id="pomoSettingsMenu">
                   <div class="setting-section-label">time (minutes)</div>
-
                   <div class="setting-slider-row">
-                    <span>work</span>
+                    <span>focus</span>
                     <div class="setting-slider-right">
                       <input type="range" class="pomo-slider" id="settingWorkDur" min="1" max="90" value="25">
                       <span class="slider-val" id="settingWorkDurVal">25</span>
                     </div>
                   </div>
                   <div class="setting-slider-row">
-                    <span>short break</span>
+                    <span>rest</span>
                     <div class="setting-slider-right">
                       <input type="range" class="pomo-slider" id="settingShortBreak" min="1" max="30" value="5">
                       <span class="slider-val" id="settingShortBreakVal">5</span>
                     </div>
                   </div>
-                  <div class="setting-slider-row">
-                    <span>long break</span>
-                    <div class="setting-slider-right">
-                      <input type="range" class="pomo-slider" id="settingLongBreak" min="5" max="60" value="15">
-                      <span class="slider-val" id="settingLongBreakVal">15</span>
-                    </div>
-                  </div>
-
-                  <div class="setting-row">
-                    <span>long break every</span>
-                    <div class="interval-wrap">
-                      <button class="interval-btn pop-btn" id="intervalDec">−</button>
-                      <span class="interval-val" id="settingLongIntervalDisplay">4</span>
-                      <span class="interval-unit">sessions</span>
-                      <button class="interval-btn pop-btn" id="intervalInc">+</button>
-                    </div>
-                  </div>
-
-                  <div class="setting-section-label">auto start</div>
-
-                  <div class="setting-row">
-                    <span>breaks</span>
-                    <label class="toggle-switch">
-                      <input type="checkbox" id="settingAutoBreaks" checked>
-                      <span class="toggle-track"></span>
-                    </label>
-                  </div>
-                  <div class="setting-row">
-                    <span>pomodoros</span>
-                    <label class="toggle-switch">
-                      <input type="checkbox" id="settingAutoPomodoros">
-                      <span class="toggle-track"></span>
-                    </label>
-                  </div>
-
-                  <div class="setting-section-label">sounds</div>
-
-                  <div class="setting-row">
-                    <span>ticking</span>
-                    <label class="toggle-switch">
-                      <input type="checkbox" id="settingTick">
-                      <span class="toggle-track"></span>
-                    </label>
-                  </div>
-                  <div class="setting-row">
-                    <span>break bell</span>
-                    <label class="toggle-switch">
-                      <input type="checkbox" id="settingBell" checked>
-                      <span class="toggle-track"></span>
-                    </label>
-                  </div>
-
-                  <div class="setting-section-label">timer name</div>
-                  <div class="setting-row">
-                    <input type="text" id="pomoNameInput" class="setting-name-input" placeholder="focus" maxlength="20">
-                  </div>
                 </div>
 
-                <div class="pomo-circle-wrap">
-                  <svg class="pomo-svg" viewBox="0 0 120 120">
-                    <circle class="pomo-bg" cx="60" cy="60" r="54"></circle>
-                    <circle class="pomo-progress" cx="60" cy="60" r="54" id="pomoProgress" stroke-dasharray="339.292" stroke-dashoffset="0"></circle>
-                  </svg>
-                  <div class="pomo-time" id="pomoTime">25:00</div>
-                  <div class="pomo-name-display" id="pomoNameDisplay">focus</div>
-                </div>
-                <div class="pomo-controls">
-                  <button class="pomo-btn pop-btn" id="pomoToggle">▶</button>
-                  <button class="pomo-btn pop-btn pomo-reset" id="pomoReset">↻</button>
-                </div>
+                <!-- Main row: circle (or focus display) + controls column -->
+                <div class="pomo-main-row">
+
+                  <!-- Pomodoro countdown circle -->
+                  <div class="pomo-circle-wrap">
+                    <svg class="pomo-svg" viewBox="0 0 160 160">
+                      <circle class="pomo-bg" cx="80" cy="80" r="70"></circle>
+                      <circle class="pomo-progress" cx="80" cy="80" r="70" id="pomoProgress" stroke-dasharray="439.823" stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div class="pomo-time" id="pomoTime">25:00</div>
+                    <div class="pomo-name-display" id="pomoNameDisplay">focus</div>
+                  </div>
+
+                  <!-- Focus mode count-up display -->
+                  <div class="pomo-focus-display" id="pomoFocusDisplay">
+                    <div class="focus-phase-label" id="focusPhaseLabel">focus</div>
+                    <div class="focus-time-display" id="focusTimeDisplay">0:00:00</div>
+                  </div>
+
+                  <!-- Controls column: play, reset, sound, settings -->
+                  <div class="pomo-controls-col">
+                    <button class="pomo-btn pop-btn" id="pomoToggle" title="Play / Pause"></button>
+                    <button class="pomo-btn pop-btn pomo-reset" id="pomoReset" title="Restart"></button>
+                    <button class="pomo-btn pop-btn pomo-sound-btn" id="pomoSound" title="Toggle sound"></button>
+                    <button class="pomo-btn pop-btn pomo-settings-btn" id="pomoSettingsBtn" title="Settings"></button>
+                  </div>
+
+                </div><!-- /pomo-main-row -->
 
                 <div class="pomo-footer">
                   <div class="pomo-cycles-wrap" id="pomoCyclesWrap">
@@ -215,25 +180,24 @@
           </div><!-- /productivity-hub -->
         </div><!-- /dashStudyPane -->
 
-        <!-- Terminal pane -->
+        <!-- Chat pane -->
         <div class="dash-pane dash-pane--hidden" id="dashTerminalPane">
-          <div class="terminal" id="terminal">
-            <div class="terminal-header">
-              <div>
-                <span class="host" id="term-host">0bsidian-bit</span>
-                <span class="badge" id="term-badge">~ · zsh</span>
-              </div>
+          <div class="chat-pane" id="chatPane">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-turnstile-wrap" id="chatTurnstileWrap">
+              <div id="chatTurnstileWidget"></div>
             </div>
-            <div class="terminal-body" id="body">
-              <div id="output"></div>
-              <div class="turnstile-wrap" id="turnstileWrap">
-                <div id="turnstileWidget"></div>
-              </div>
-              <div class="input-line">
-                <span class="prompt" id="term-prompt">&gt;</span>
-                <div id="cmd-input" class="cmd-input" contenteditable="true" spellcheck="false" autocapitalize="none" autocorrect="off" enterkeyhint="go" role="textbox" aria-label="Terminal command input" aria-multiline="false" data-gramm="false"></div>
-                <span class="caret" id="caret"></span>
-              </div>
+            <div class="chat-input-bar">
+              <button class="chat-menu-btn pop-btn" id="chatMenuBtn" title="Options">···</button>
+              <input type="text" class="chat-input" id="chatInput"
+                     placeholder="type to chat…" autocomplete="off"
+                     autocapitalize="sentences" spellcheck="true"
+                     enterkeyhint="send" aria-label="Chat message" disabled>
+              <button class="chat-send-btn pop-btn" id="chatSendBtn" title="Send"></button>
+            </div>
+            <div class="chat-menu-dropdown" id="chatMenuDropdown">
+              <button class="chat-menu-item" id="chatForget">clear memory</button>
+              <button class="chat-menu-item" id="chatClear">clear chat</button>
             </div>
           </div>
         </div><!-- /dashTerminalPane -->
@@ -305,6 +269,7 @@
           <p>Tasks, timers, chat history, and buddy choice live only in your browser's <code>localStorage</code>. Clearing site data wipes everything.</p>
           <p>Chat requests go to Cloudflare Workers AI over HTTPS and are not logged by us. Ephemeral KV entries (rate-limit buckets keyed by IP, a 90-second "studying now" heartbeat, and a 30-minute Turnstile verification flag) expire on their own. No PII, no analytics, no trackers, no cookies beyond what Turnstile requires for bot prevention.</p>
           <p>Source code is public on GitHub — audit it yourself.</p>
+          <p class="privacy-summary-line">privacy-first. no analytics, no trackers. tasks and chats live only in your browser.</p>
         </div>
         <div class="overlay-actions">
           <button class="contact-submit contact-submit-primary" id="privacyClose">close</button>
@@ -312,15 +277,24 @@
       </div>
     </div>
 
+    <div class="privacy-overlay overlay" id="devMsgOverlay" aria-hidden="true" aria-modal="true" role="dialog">
+      <div class="contact-panel">
+        <p class="contact-title">message from developer</p>
+        <div class="privacy-body" id="devMsgBody">
+          <p style="color: var(--term-dimmer); font-style: italic;">loading…</p>
+        </div>
+        <div class="overlay-actions">
+          <button class="contact-submit contact-submit-primary" id="devMsgClose">close</button>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">
       <a href="#" id="footerContactLink" class="footer-contact">get in touch</a>
-      <span>·</span> india <span>·</span>
+      <span>·</span> <a href="#" id="footerDevName" class="footer-link">Dr. Lokesh Tewari</a> <span>·</span>
       <span id="footerYear"></span>
       <span>·</span>
       <a href="#" id="footerPrivacyLink" class="footer-link">privacy</a>
-    </div>
-    <div class="privacy-footer" id="privacyFooter">
-      privacy-first. no analytics, no trackers. tasks and chats live only in your browser.
     </div>
   </div>
 
