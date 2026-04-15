@@ -1639,9 +1639,9 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   text-align: left;
   line-height: 1.4;
   position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  white-space: nowrap;
+  top: 0;
+  left: calc(100% + 10px);
+  white-space: normal;
   z-index: 30;
 }
 
@@ -1650,12 +1650,6 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   transform: translateY(0);
 }
 
-/* Remove the old left/right side variants — companion is now always top-left */
-.study-companion[data-side="right"] .speech-bubble,
-.study-companion[data-side="left"] .speech-bubble {
-  left: 0;
-  right: auto;
-}
 
 .companion-art {
   color: var(--accent);
@@ -2280,14 +2274,6 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
 .study-companion {
   transition: opacity 0.3s;
-}
-.study-companion[data-side="right"] .speech-bubble {
-  right: 0;
-  left: auto;
-}
-.study-companion[data-side="left"] .speech-bubble {
-  left: 0;
-  right: auto;
 }
 
 .companion-art[data-effect="flash"] { animation: cx-flash 600ms ease; }
