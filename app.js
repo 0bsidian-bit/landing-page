@@ -156,7 +156,7 @@ class TerminalUI {
       github: `github.com/0bsidian-bit\n\nprojects, dotfiles, and occasional proofs of concept.\nopen to collaboration — send a message first.`,
       whoami: '0bsidian-bit. a working physician. and you?',
       sudo: 'permission denied. nice try.',
-      model: 'gpt-oss-120b  ·  cloudflare workers ai',
+      model: 'llama 3.3 70b fp8  ·  cloudflare workers ai',
       privacy: `your browser only. tasks, timers, chat history → localStorage.\nno analytics, no trackers, no cookies beyond turnstile.\nkv entries are ephemeral: rate-limit (60s), studying heartbeat (90s), turnstile verify (30m).\nsource: github.com/0bsidian-bit`,
       version: () => {
         const now = new Date();
