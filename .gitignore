@@ -1,3 +1,6 @@
+# Claude Code internals
+.claude/
+
 # wrangler files
 .wrangler
 .dev.vars*

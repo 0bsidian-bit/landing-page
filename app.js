@@ -7,7 +7,7 @@ const CONFIG = {
   subtitleText: 'notes from a working physician',
   typingSpeedMs: 55,
   botName: '0bsidian',
-  contactEmail: 'contact@lokeshtewari.uk',
+  contactEmail: 'tarball.lipid_7i@icloud.com',
   portalUrl: 'https://start.lokeshtewari.uk'
 };
 
