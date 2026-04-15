@@ -349,6 +349,7 @@ const POMO_STATE_KEY = '0bsidian_pomo_state_v1';
 const POMO_STATS_KEY = '0bsidian_pomo_stats';
 const POMO_NAMES_KEY = '0bsidian_pomo_names_v1';
 const POMO_SETTINGS_KEY = '0bsidian_pomo_settings_v1';
+const POMO_LOG_KEY = '0bsidian_pomo_log_v1';
 const POMO_CIRCUMFERENCE = 339.292;
 const POMO_DEFAULT_SETTINGS = {
   workDuration: 25,
@@ -661,6 +662,7 @@ class PomodoroTimer {
       try { localStorage.setItem(POMO_STATS_KEY, JSON.stringify({ cycles: this.totalCycles })); } catch {}
       if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.totalCycles + 1;
       this.renderCycleDots();
+      SessionLog.push({ id: Date.now(), name: this.names.pomodoro || 'focus', completedAt: Date.now(), duration: this.settings.workDuration });
 
       if (this.setInCount >= this.settings.longBreakInterval) {
         this.setMode('longBreak', { autoStart: this.settings.autoStartBreaks });
@@ -883,6 +885,116 @@ class TodoManager {
 
       this.list.appendChild(groupDiv);
     });
+  }
+}
+
+class SessionLog {
+  static MAX = 100;
+
+  static load() {
+    try { return JSON.parse(localStorage.getItem(POMO_LOG_KEY)) || []; } catch { return []; }
+  }
+
+  static save(log) {
+    try { localStorage.setItem(POMO_LOG_KEY, JSON.stringify(log)); } catch {}
+  }
+
+  static push(entry) {
+    const log = this.load();
+    log.unshift(entry);
+    if (log.length > this.MAX) log.splice(this.MAX);
+    this.save(log);
+    this.render();
+  }
+
+  static fmtTime(ts) {
+    const d = new Date(ts);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+    const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return t;
+    if (isYesterday) return `yesterday ${t}`;
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + t;
+  }
+
+  static render() {
+    const container = document.getElementById('sessionLog');
+    const countEl = document.getElementById('sessionLogCount');
+    if (!container) return;
+    const log = this.load();
+    if (countEl) countEl.textContent = log.length;
+
+    container.replaceChildren();
+
+    if (log.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'session-empty';
+      empty.textContent = 'completed pomodoros will appear here';
+      container.appendChild(empty);
+      return;
+    }
+
+    log.forEach(entry => {
+      const item = document.createElement('div');
+      item.className = 'session-item';
+
+      const dot = document.createElement('span');
+      dot.className = 'session-dot';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'session-name';
+      nameEl.textContent = entry.name;
+      nameEl.title = 'click to rename';
+      nameEl.onclick = () => this.startRename(entry.id, nameEl, log);
+
+      const meta = document.createElement('span');
+      meta.className = 'session-meta';
+      meta.textContent = `${entry.duration}m · ${this.fmtTime(entry.completedAt)}`;
+
+      const del = document.createElement('button');
+      del.className = 'session-delete pop-btn';
+      del.textContent = '×';
+      del.title = 'Remove';
+      del.onclick = () => this.delete(entry.id);
+
+      item.append(dot, nameEl, meta, del);
+      container.appendChild(item);
+    });
+  }
+
+  static startRename(id, nameEl, log) {
+    const entry = log.find(e => e.id === id);
+    if (!entry) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'session-rename-input';
+    input.value = entry.name;
+    input.maxLength = 40;
+    nameEl.replaceWith(input);
+    input.focus();
+    input.select();
+    const commit = () => {
+      const val = input.value.trim();
+      if (val) { entry.name = val; this.save(log); }
+      this.render();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') this.render();
+    });
+  }
+
+  static delete(id) {
+    this.save(this.load().filter(e => e.id !== id));
+    this.render();
+  }
+
+  static clear() {
+    this.save([]);
+    this.render();
   }
 }
 
@@ -1208,6 +1320,10 @@ class TerminalApp {
     this.install = new InstallHint();
 
     this.ui.setAppInstance(this);
+
+    // Session log: render on load and wire up clear button
+    SessionLog.render();
+    document.getElementById('sessionLogClear')?.addEventListener('click', () => SessionLog.clear());
 
     if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', () => this.boot());
     else this.boot();

@@ -1350,6 +1350,147 @@ select.model-picker option { background: var(--term-bg); color: var(--term-fg); 
   box-shadow: 0 0 0 2px rgba(212, 121, 90, 0.15);
 }
 
+/* ── Session Log ─────────────────────────────────────────────────────────── */
+
+.session-log-section {
+  padding-top: 14px;
+  border-top: 1px solid var(--term-divider);
+  flex-shrink: 0;
+}
+
+.session-log-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.session-log-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+}
+
+.session-log-count {
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.session-log-clear {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--term-divider);
+  color: var(--term-dimmer);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 999px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.session-log-clear:hover { color: var(--fg); border-color: var(--fg-dimmer); }
+
+.session-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 160px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--term-scrollbar) transparent;
+}
+.session-log-list::-webkit-scrollbar { width: 4px; }
+.session-log-list::-webkit-scrollbar-thumb { background: var(--term-scrollbar); border-radius: 2px; }
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--term-divider);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: background 0.15s;
+}
+.session-item:hover { background: rgba(255, 255, 255, 0.04); }
+
+.session-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.session-name {
+  color: var(--term-fg);
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.session-name:hover { color: var(--accent); }
+
+.session-meta {
+  color: var(--term-dimmer);
+  white-space: nowrap;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.session-delete {
+  background: transparent;
+  border: none;
+  color: var(--term-dimmer);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 1px;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.session-item:hover .session-delete { opacity: 1; }
+.session-delete:hover { color: #e07878; }
+
+.session-rename-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  color: var(--term-fg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+}
+
+.session-empty {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--term-dimmer);
+  font-style: italic;
+  padding: 6px 8px;
+  text-align: center;
+}
+
 /* ── Study Companion ──────────────────────────────────────────────────────── */
 
 .study-companion {
