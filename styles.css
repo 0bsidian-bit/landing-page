@@ -1234,12 +1234,14 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   min-width: 110px;
 }
 
-/* Timer column: circle or focus display */
+/* Timer column: subtabs on top, circle/display below */
 .pomo-timer-col {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 14px;
   min-height: 180px;
 }
 
