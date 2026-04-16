@@ -21,7 +21,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="0bsidian">
-<link rel="stylesheet" href="/styles.css?v=12">
+<link rel="stylesheet" href="/styles.css?v=13">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script src="/app.js?v=8" defer></script>
 </head>
@@ -217,10 +217,21 @@
 
         <!-- What's New pane -->
         <div class="dash-pane dash-pane--hidden" id="dashWhatsNewPane">
-          <div class="whats-new-pane">
-            <div class="whats-new-content" id="whatsNewContent">
-              <p class="whats-new-loading">loading…</p>
+          <div class="whats-new-layout">
+
+            <div class="whats-new-pane">
+              <div class="whats-new-content" id="whatsNewContent">
+                <p class="whats-new-loading">loading…</p>
+              </div>
             </div>
+
+            <aside class="whats-new-ad-col">
+              <div class="ad-slot ad-slot--rectangle">
+                <span class="ad-slot-label">sponsored</span>
+                <!-- ad code here -->
+              </div>
+            </aside>
+
           </div>
         </div><!-- /dashWhatsNewPane -->
 
