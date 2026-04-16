@@ -1251,7 +1251,6 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   flex-direction: column;
   gap: 10px;
   align-items: center;
-  position: relative;
 }
 
 .pomo-circle-wrap {
@@ -1401,8 +1400,8 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 .pomo-settings-menu {
   display: none;
   position: absolute;
-  bottom: 0;
-  right: calc(100% + 10px);
+  bottom: 24px;
+  right: 24px;
   width: 170px;
   z-index: 30;
   background: rgba(14, 14, 14, 0.95);
