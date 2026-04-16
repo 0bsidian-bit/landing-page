@@ -1122,13 +1122,12 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
 .pomodoro-card {
   width: 100%;
-  min-height: 420px;
   background: var(--term-bg);
   border-radius: 14px;
   padding: 28px 24px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   box-shadow: var(--shadow);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -1142,15 +1141,16 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   box-shadow: var(--shadow-hover);
 }
 
-/* Timer mode switch (Focus | Pomodoro) */
+/* Timer mode switch (Focus | Pomodoro) — vertical on desktop, horizontal on mobile */
 .timer-mode-switch {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
   background: rgba(240, 238, 230, 0.04);
   padding: 4px;
-  border-radius: 99px;
-  margin-bottom: 16px;
-  width: fit-content;
+  border-radius: 12px;
+  margin-bottom: 0;
+  width: 100%;
 }
 .timer-mode-btn {
   background: transparent;
@@ -1158,11 +1158,13 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--term-dimmer);
-  padding: 7px 16px;
-  border-radius: 99px;
+  padding: 7px 14px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: lowercase;
+  text-align: left;
+  white-space: nowrap;
 }
 .timer-mode-btn.active {
   background: var(--accent);
@@ -1171,23 +1173,23 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
 .pomo-tabs {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
   background: rgba(240, 238, 230, 0.04);
   padding: 4px;
-  border-radius: 99px;
-  margin-bottom: 16px;
+  border-radius: 12px;
+  margin-bottom: 0;
+  width: 100%;
 }
-
-/* In focus mode, hide pomodoro sub-tabs and circle; show focus display */
+/* In focus mode, hide pomodoro sub-tabs and circle wrap; show focus display */
 .pomodoro-card.timer-mode--focus .pomo-subtabs { display: none; }
-.pomodoro-card.timer-mode--focus .pomo-svg { display: none; }
-.pomodoro-card.timer-mode--focus .pomo-time { display: none; }
-.pomodoro-card.timer-mode--focus .pomo-name-display { display: none; }
+.pomodoro-card.timer-mode--focus .pomo-circle-wrap { display: none; }
 .pomodoro-card.timer-mode--focus .pomo-cycles-wrap { display: none; }
 .pomodoro-card.timer-mode--focus .pomo-focus-display { display: flex; }
 
 /* In pomodoro mode, hide focus display; show circle */
 .pomodoro-card.timer-mode--pomodoro .pomo-subtabs { display: flex; }
+.pomodoro-card.timer-mode--pomodoro .pomo-circle-wrap { display: flex; }
 .pomodoro-card.timer-mode--pomodoro .pomo-focus-display { display: none; }
 .pomodoro-card.timer-mode--pomodoro .pomo-svg { display: block; }
 .pomodoro-card.timer-mode--pomodoro .pomo-time { display: block; }
@@ -1205,6 +1207,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: lowercase;
+  text-align: left;
 }
 
 .pomo-tab.active {
@@ -1212,14 +1215,35 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   color: var(--bg);
 }
 
-/* Main row: circle left, controls column right */
+/* Main row: left col (controls) + right col (timer) */
 .pomo-main-row {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
   width: 100%;
+  justify-content: flex-start;
+  flex: 1;
+}
+
+/* Left column: mode switch + subtabs + controls */
+.pomo-left-col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+  min-width: 110px;
+}
+
+/* Timer column: circle or focus display */
+.pomo-timer-col {
+  flex: 1;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  min-height: 180px;
 }
 
 /* Focus mode count-up display */
@@ -1228,7 +1252,6 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 200px;
 }
 .focus-phase-label {
   font-family: var(--font-mono);
@@ -1245,12 +1268,12 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   letter-spacing: -0.02em;
 }
 
-/* Controls column */
+/* Controls column — vertical stack in left col */
 .pomo-controls-col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  align-items: center;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .pomo-circle-wrap {
@@ -1400,16 +1423,18 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 .pomo-settings-menu {
   display: none;
   position: absolute;
-  bottom: 24px;
-  right: 24px;
-  width: 170px;
+  top: 0;
+  left: calc(100% + 12px);
+  right: auto;
+  bottom: auto;
+  width: 240px;
   z-index: 30;
-  background: rgba(14, 14, 14, 0.95);
+  background: rgba(14, 14, 14, 0.97);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(240, 237, 232, 0.10);
+  border: 1px solid rgba(240, 237, 232, 0.12);
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   font-size: 12px;
   font-family: var(--font-mono);
   text-align: left;
@@ -1446,7 +1471,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   gap: 12px;
   border-bottom: 1px solid var(--term-divider);
 }
-.setting-slider-row > span { flex-shrink: 0; min-width: 72px; }
+.setting-slider-row > span { flex-shrink: 0; min-width: 40px; }
 .setting-slider-right {
   display: flex;
   align-items: center;
@@ -1568,6 +1593,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   text-align: center;
   border-top: 1px solid var(--term-divider);
   padding-top: 16px;
+  margin-top: 20px;
 }
 
 .studying-now {
@@ -2114,23 +2140,79 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
     padding: 20px 16px;
   }
 
-  .pomo-circle-wrap {
-    width: clamp(140px, 40vw, 180px);
-    height: clamp(140px, 40vw, 180px);
-    margin-bottom: 16px;
+  /* Mobile: stack timer on top, controls below */
+  .pomo-main-row {
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
   }
 
-  .pomo-time {
-    font-size: 28px;
+  .pomo-timer-col {
+    order: -1; /* timer appears first (top) */
+    width: 100%;
+    min-height: 0;
+  }
+
+  .pomo-left-col {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  /* Mode switch and subtabs go horizontal on mobile */
+  .timer-mode-switch {
+    flex-direction: row;
+    width: auto;
+    border-radius: 99px;
+  }
+
+  .timer-mode-btn {
+    text-align: center;
+    border-radius: 99px;
+    padding: 6px 14px;
   }
 
   .pomo-tabs {
-    margin-bottom: 14px;
+    flex-direction: row;
+    width: auto;
+    border-radius: 99px;
   }
 
   .pomo-tab {
     font-size: 11px;
     padding: 6px 10px;
+    text-align: center;
+    border-radius: 99px;
+  }
+
+  /* Controls in a row on mobile */
+  .pomo-controls-col {
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+  }
+
+  /* Settings menu: appears above the left col on mobile */
+  .pomo-settings-menu {
+    left: 50%;
+    transform: translateX(-50%);
+    top: auto;
+    bottom: calc(100% + 8px);
+    width: 260px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .pomo-circle-wrap {
+    width: clamp(140px, 40vw, 180px);
+    height: clamp(140px, 40vw, 180px);
+  }
+
+  .pomo-time {
+    font-size: 28px;
   }
 
   .pomo-btn {
@@ -2220,15 +2302,6 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 }
 
 @media (max-width: 480px) {
-  .pomo-main-row {
-    flex-direction: column;
-    gap: 16px;
-  }
-  .pomo-controls-col {
-    flex-direction: row;
-    gap: 10px;
-  }
-
   .page {
     padding: 12px 8px;
   }
