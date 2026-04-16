@@ -85,19 +85,13 @@
                 <!-- Main row: left col (mode + controls) + right col (timer) -->
                 <div class="pomo-main-row">
 
-                  <!-- Left column: mode switch + subtabs + controls + settings -->
+                  <!-- Left column: mode switch + controls + settings -->
                   <div class="pomo-left-col">
 
                     <!-- Mode switch: Focus | Pomodoro -->
                     <div class="timer-mode-switch">
                       <button class="timer-mode-btn active" data-timer-mode="focus">focus</button>
                       <button class="timer-mode-btn" data-timer-mode="pomodoro">pomodoro</button>
-                    </div>
-
-                    <!-- Pomodoro sub-tabs (only visible in pomodoro mode) -->
-                    <div class="pomo-tabs pomo-subtabs" id="pomoSubtabs">
-                      <button class="pomo-tab pop-btn active" data-mode="pomodoro">focus</button>
-                      <button class="pomo-tab pop-btn" data-mode="shortBreak">rest</button>
                     </div>
 
                     <!-- Controls: play, reset, sound, settings -->
@@ -129,8 +123,14 @@
 
                   </div><!-- /pomo-left-col -->
 
-                  <!-- Timer column: circle or focus display -->
+                  <!-- Timer column: subtabs + circle or focus display -->
                   <div class="pomo-timer-col">
+
+                    <!-- Pomodoro sub-tabs (only visible in pomodoro mode) -->
+                    <div class="pomo-tabs pomo-subtabs" id="pomoSubtabs">
+                      <button class="pomo-tab pop-btn active" data-mode="pomodoro">focus</button>
+                      <button class="pomo-tab pop-btn" data-mode="shortBreak">rest</button>
+                    </div>
 
                     <!-- Pomodoro countdown circle -->
                     <div class="pomo-circle-wrap">
