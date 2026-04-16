@@ -1141,16 +1141,16 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   box-shadow: var(--shadow-hover);
 }
 
-/* Timer mode switch (Focus | Pomodoro) — vertical on desktop, horizontal on mobile */
+/* Timer mode switch (Focus | Pomodoro) — horizontal pill, same language as dash-tabs */
 .timer-mode-switch {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
   background: rgba(240, 238, 230, 0.04);
   padding: 4px;
-  border-radius: 12px;
+  border-radius: 99px;
   margin-bottom: 0;
-  width: 100%;
+  width: fit-content;
 }
 .timer-mode-btn {
   background: transparent;
@@ -1158,13 +1158,11 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--term-dimmer);
-  padding: 7px 14px;
-  border-radius: 8px;
+  padding: 7px 16px;
+  border-radius: 99px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: lowercase;
-  text-align: left;
-  white-space: nowrap;
 }
 .timer-mode-btn.active {
   background: var(--accent);
@@ -1173,13 +1171,13 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
 .pomo-tabs {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
   background: rgba(240, 238, 230, 0.04);
   padding: 4px;
-  border-radius: 12px;
+  border-radius: 99px;
   margin-bottom: 0;
-  width: 100%;
+  width: fit-content;
 }
 /* In focus mode, hide pomodoro sub-tabs and circle wrap; show focus display */
 .pomodoro-card.timer-mode--focus .pomo-subtabs { display: none; }
@@ -1207,7 +1205,6 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: lowercase;
-  text-align: left;
 }
 
 .pomo-tab.active {
@@ -1273,7 +1270,7 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .pomo-circle-wrap {
@@ -2163,30 +2160,13 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
     min-width: 0;
   }
 
-  /* Mode switch and subtabs go horizontal on mobile */
-  .timer-mode-switch {
-    flex-direction: row;
-    width: auto;
-    border-radius: 99px;
-  }
-
   .timer-mode-btn {
-    text-align: center;
-    border-radius: 99px;
-    padding: 6px 14px;
-  }
-
-  .pomo-tabs {
-    flex-direction: row;
-    width: auto;
-    border-radius: 99px;
+    padding: 6px 12px;
   }
 
   .pomo-tab {
     font-size: 11px;
     padding: 6px 10px;
-    text-align: center;
-    border-radius: 99px;
   }
 
   /* Controls in a row on mobile */
