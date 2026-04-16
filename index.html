@@ -219,18 +219,19 @@
         <div class="dash-pane dash-pane--hidden" id="dashWhatsNewPane">
           <div class="whats-new-layout">
 
-            <div class="whats-new-pane">
-              <div class="whats-new-content" id="whatsNewContent">
-                <p class="whats-new-loading">loading…</p>
-              </div>
-            </div>
-
+            <!-- Ad first in DOM so it naturally sits on top on mobile -->
             <aside class="whats-new-ad-col">
               <div class="ad-slot ad-slot--rectangle">
                 <span class="ad-slot-label">sponsored</span>
                 <!-- ad code here -->
               </div>
             </aside>
+
+            <div class="whats-new-pane">
+              <div class="whats-new-content" id="whatsNewContent">
+                <p class="whats-new-loading">loading…</p>
+              </div>
+            </div>
 
           </div>
         </div><!-- /dashWhatsNewPane -->
