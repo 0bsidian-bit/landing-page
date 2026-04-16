@@ -21,7 +21,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="0bsidian">
-<link rel="stylesheet" href="/styles.css?v=13">
+<link rel="stylesheet" href="/styles.css?v=14">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script src="/app.js?v=8" defer></script>
 </head>
@@ -321,12 +321,14 @@
 
     <div class="privacy-overlay overlay" id="privacyOverlay" aria-hidden="true" aria-modal="true" role="dialog">
       <div class="contact-panel">
-        <p class="contact-title">privacy</p>
+        <p class="contact-title">privacy policy</p>
         <div class="privacy-body">
           <p><strong>0bsidian stores nothing about you on our servers.</strong> Tasks, timers, and chat history live only in your browser's <code>localStorage</code>.</p>
-          <p>Chat requests go to Cloudflare Workers AI over HTTPS. Ephemeral KV entries (rate-limit, heartbeat, Turnstile flag) expire automatically. No PII, no analytics, no trackers.</p>
+          <p>Chat requests go to Cloudflare Workers AI over HTTPS. Ephemeral KV entries (rate-limit, heartbeat, Turnstile flag) expire automatically. No PII is retained.</p>
+          <p><strong>Advertising.</strong> This site uses <strong>Google AdSense</strong> to display ads. Google may use cookies and similar technologies to show you personalised ads based on your browsing activity across sites. You can review Google's data practices and opt out at <a href="https://adssettings.google.com" target="_blank" rel="noopener" style="color:var(--accent)">adssettings.google.com</a>.</p>
+          <p>AdSense may set third-party cookies independent of this site. We do not control or have access to those cookies.</p>
           <p>Source code is <a href="https://github.com/0bsidian-bit/landing-page" target="_blank" rel="noopener" style="color:var(--accent)">public on GitHub</a>.</p>
-          <p class="privacy-summary-line">privacy-first · no trackers · your data never leaves your browser</p>
+          <p class="privacy-summary-line">your app data never leaves your browser · ads served by google adsense</p>
         </div>
         <div class="overlay-actions">
           <button class="contact-submit contact-submit-primary" id="privacyClose">close</button>
@@ -362,7 +364,7 @@
     <div class="footer">
       <a href="#" id="footerDevName" class="footer-link">Dr. Lokesh Tewari</a>
       <span>·</span>
-      <a href="#" id="footerPrivacyLink" class="footer-link">privacy</a>
+      <a href="#" id="footerPrivacyLink" class="footer-link">privacy policy</a>
     </div>
   </div>
 
