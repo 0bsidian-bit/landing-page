@@ -2041,19 +2041,13 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   .chat-pane { grid-template-columns: 1fr; }
   .chat-sidebar { display: none; }
 
-  /* Mobile: flex column — ad is first in DOM so it sits on top naturally */
-  .whats-new-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+  /* Mobile ad slot: compact leaderboard banner */
   .whats-new-ad-col {
-    display: flex;
     position: static;
     width: 100%;
   }
   .ad-slot {
-    min-height: 90px;  /* leaderboard banner height on mobile */
+    min-height: 90px;
     width: 100%;
   }
 
@@ -2906,18 +2900,26 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
 /* ── What's New Pane ─────────────────────────────────────────────────────── */
 
-/* Two-column layout: content left, ad right */
+/* Mobile-first: single column, ad on top */
 .whats-new-layout {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
-  align-items: start;
 }
 
-/* Explicit placement keeps ad on the right even though it's first in DOM */
-.whats-new-pane   { grid-column: 1; grid-row: 1; }
-.whats-new-ad-col { grid-column: 2; grid-row: 1; }
+/* Desktop: two-column grid, content left, ad right */
+@media (min-width: 801px) {
+  .whats-new-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 24px;
+    align-items: start;
+  }
+  /* Explicit placement keeps ad on the right even though it's first in DOM */
+  .whats-new-pane   { grid-column: 1; grid-row: 1; }
+  .whats-new-ad-col { grid-column: 2; grid-row: 1; }
+}
 
 .whats-new-pane {
   width: 100%;
