@@ -21,7 +21,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="0bsidian">
-<link rel="stylesheet" href="/styles.css?v=11">
+<link rel="stylesheet" href="/styles.css?v=12">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script src="/app.js?v=8" defer></script>
 </head>
@@ -82,63 +82,73 @@
               <!-- Pomodoro Card -->
               <div class="pomodoro-card timer-mode--focus" id="pomodoroCard">
 
-                <!-- Mode switch: Focus | Pomodoro -->
-                <div class="timer-mode-switch">
-                  <button class="timer-mode-btn active" data-timer-mode="focus">focus</button>
-                  <button class="timer-mode-btn" data-timer-mode="pomodoro">pomodoro</button>
-                </div>
-
-                <!-- Pomodoro sub-tabs (only visible in pomodoro mode) -->
-                <div class="pomo-tabs pomo-subtabs" id="pomoSubtabs">
-                  <button class="pomo-tab pop-btn active" data-mode="pomodoro">focus</button>
-                  <button class="pomo-tab pop-btn" data-mode="shortBreak">rest</button>
-                </div>
-
-                <!-- Main row: circle (or focus display) + controls column -->
+                <!-- Main row: left col (mode + controls) + right col (timer) -->
                 <div class="pomo-main-row">
 
-                  <!-- Pomodoro countdown circle -->
-                  <div class="pomo-circle-wrap">
-                    <svg class="pomo-svg" viewBox="0 0 160 160">
-                      <circle class="pomo-bg" cx="80" cy="80" r="70"></circle>
-                      <circle class="pomo-progress" cx="80" cy="80" r="70" id="pomoProgress" stroke-dasharray="439.823" stroke-dashoffset="0"></circle>
-                    </svg>
-                    <div class="pomo-time" id="pomoTime">25:00</div>
-                    <div class="pomo-name-display" id="pomoNameDisplay">focus</div>
-                  </div>
+                  <!-- Left column: mode switch + subtabs + controls + settings -->
+                  <div class="pomo-left-col">
 
-                  <!-- Focus mode count-up display -->
-                  <div class="pomo-focus-display" id="pomoFocusDisplay">
-                    <div class="focus-phase-label" id="focusPhaseLabel">focus</div>
-                    <div class="focus-time-display" id="focusTimeDisplay">0:00:00</div>
-                  </div>
+                    <!-- Mode switch: Focus | Pomodoro -->
+                    <div class="timer-mode-switch">
+                      <button class="timer-mode-btn active" data-timer-mode="focus">focus</button>
+                      <button class="timer-mode-btn" data-timer-mode="pomodoro">pomodoro</button>
+                    </div>
 
-                  <!-- Controls column: play, reset, sound, settings -->
-                  <div class="pomo-controls-col">
-                    <button class="pomo-btn pop-btn" id="pomoToggle" title="Play / Pause"></button>
-                    <button class="pomo-btn pop-btn pomo-reset" id="pomoReset" title="Restart"></button>
-                    <button class="pomo-btn pop-btn pomo-sound-btn" id="pomoSound" title="Toggle sound"></button>
-                    <button class="pomo-btn pop-btn pomo-settings-btn" id="pomoSettingsBtn" title="Settings"></button>
-                  </div>
+                    <!-- Pomodoro sub-tabs (only visible in pomodoro mode) -->
+                    <div class="pomo-tabs pomo-subtabs" id="pomoSubtabs">
+                      <button class="pomo-tab pop-btn active" data-mode="pomodoro">focus</button>
+                      <button class="pomo-tab pop-btn" data-mode="shortBreak">rest</button>
+                    </div>
 
-                  <!-- Settings menu: anchored to card bottom-right, clear of circle -->
-                  <div class="pomo-settings-menu" id="pomoSettingsMenu">
-                    <div class="setting-section-label">time (minutes)</div>
-                    <div class="setting-slider-row">
-                      <span>focus</span>
-                      <div class="setting-slider-right">
-                        <input type="range" class="pomo-slider" id="settingWorkDur" min="1" max="90" value="25">
-                        <span class="slider-val" id="settingWorkDurVal">25</span>
+                    <!-- Controls: play, reset, sound, settings -->
+                    <div class="pomo-controls-col">
+                      <button class="pomo-btn pop-btn" id="pomoToggle" title="Play / Pause"></button>
+                      <button class="pomo-btn pop-btn pomo-reset" id="pomoReset" title="Restart"></button>
+                      <button class="pomo-btn pop-btn pomo-sound-btn" id="pomoSound" title="Toggle sound"></button>
+                      <button class="pomo-btn pop-btn pomo-settings-btn" id="pomoSettingsBtn" title="Settings"></button>
+                    </div>
+
+                    <!-- Settings menu: opens to the right of left col -->
+                    <div class="pomo-settings-menu" id="pomoSettingsMenu">
+                      <div class="setting-section-label">time (minutes)</div>
+                      <div class="setting-slider-row">
+                        <span>focus</span>
+                        <div class="setting-slider-right">
+                          <input type="range" class="pomo-slider" id="settingWorkDur" min="1" max="90" value="25">
+                          <span class="slider-val" id="settingWorkDurVal">25</span>
+                        </div>
+                      </div>
+                      <div class="setting-slider-row">
+                        <span>rest</span>
+                        <div class="setting-slider-right">
+                          <input type="range" class="pomo-slider" id="settingShortBreak" min="1" max="30" value="5">
+                          <span class="slider-val" id="settingShortBreakVal">5</span>
+                        </div>
                       </div>
                     </div>
-                    <div class="setting-slider-row">
-                      <span>rest</span>
-                      <div class="setting-slider-right">
-                        <input type="range" class="pomo-slider" id="settingShortBreak" min="1" max="30" value="5">
-                        <span class="slider-val" id="settingShortBreakVal">5</span>
-                      </div>
+
+                  </div><!-- /pomo-left-col -->
+
+                  <!-- Timer column: circle or focus display -->
+                  <div class="pomo-timer-col">
+
+                    <!-- Pomodoro countdown circle -->
+                    <div class="pomo-circle-wrap">
+                      <svg class="pomo-svg" viewBox="0 0 160 160">
+                        <circle class="pomo-bg" cx="80" cy="80" r="70"></circle>
+                        <circle class="pomo-progress" cx="80" cy="80" r="70" id="pomoProgress" stroke-dasharray="439.823" stroke-dashoffset="0"></circle>
+                      </svg>
+                      <div class="pomo-time" id="pomoTime">25:00</div>
+                      <div class="pomo-name-display" id="pomoNameDisplay">focus</div>
                     </div>
-                  </div>
+
+                    <!-- Focus mode count-up display -->
+                    <div class="pomo-focus-display" id="pomoFocusDisplay">
+                      <div class="focus-phase-label" id="focusPhaseLabel">focus</div>
+                      <div class="focus-time-display" id="focusTimeDisplay">0:00:00</div>
+                    </div>
+
+                  </div><!-- /pomo-timer-col -->
 
                 </div><!-- /pomo-main-row -->
 
