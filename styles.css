@@ -2041,16 +2041,6 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   .chat-pane { grid-template-columns: 1fr; }
   .chat-sidebar { display: none; }
 
-  /* Mobile ad slot: compact leaderboard banner */
-  .whats-new-ad-col {
-    position: static;
-    width: 100%;
-  }
-  .ad-slot {
-    min-height: 90px;
-    width: 100%;
-  }
-
   .page {
     padding: 16px 12px;
   }
@@ -2900,25 +2890,11 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
 
 /* ── What's New Pane ─────────────────────────────────────────────────────── */
 
-/* Mobile-first: single column, ad on top */
 .whats-new-layout {
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 100%;
-}
-
-/* Desktop: two-column grid, content left, ad right */
-@media (min-width: 801px) {
-  .whats-new-layout {
-    display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 24px;
-    align-items: start;
-  }
-  /* Explicit placement keeps ad on the right even though it's first in DOM */
-  .whats-new-pane   { grid-column: 1; grid-row: 1; }
-  .whats-new-ad-col { grid-column: 2; grid-row: 1; }
 }
 
 .whats-new-pane {
@@ -2935,56 +2911,6 @@ button, [role="button"], .todo-item, .todo-subject-header, input, textarea, sele
   overflow-y: auto;
 }
 
-/* Ad sidebar column */
-.whats-new-ad-col {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: sticky;
-  top: 16px;
-}
-
-/* Ad slot card */
-.ad-slot {
-  background: var(--term-bg);
-  border-radius: 14px;
-  border: 1px solid var(--term-divider);
-  box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 250px;
-  width: 100%;
-  transition: box-shadow 0.3s ease;
-}
-
-/* Subtle "sponsored" label */
-.ad-slot-label {
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--term-dimmer);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  opacity: 0.5;
-  pointer-events: none;
-  user-select: none;
-}
-
-/* Placeholder shimmer shown when slot is empty (has no child ad iframe/img) */
-.ad-slot:not(:has(> :not(.ad-slot-label))) {
-  background: repeating-linear-gradient(
-    135deg,
-    rgba(240, 237, 232, 0.02) 0px,
-    rgba(240, 237, 232, 0.02) 1px,
-    transparent 1px,
-    transparent 12px
-  );
-}
 .whats-new-content h1 {
   font-family: var(--font-mono);
   font-size: 14px;
