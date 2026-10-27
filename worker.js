@@ -42,7 +42,7 @@ class HttpUtils {
   }
 
   static async proxyImage(url) {
-    const upstream = await fetch(url);
+    const upstream = await fetch(url, { headers: { "Accept": "image/*", "User-Agent": CONFIG.USER_AGENT } });
     const type = upstream.headers.get("content-type") || "";
     if (!upstream.ok || !type.startsWith("image/")) {
       return HttpUtils.jsonResponse({ error: "Photo not found" }, 404);

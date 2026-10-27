@@ -1162,7 +1162,10 @@ class Scenery {
     this.canvases = [document.getElementById('sceneSharp'), document.getElementById('sceneSoft')].filter(Boolean);
     this.grid = document.getElementById('sceneGrid');
     let saved = Store.get(SCENE_KEY, 'forest');
-    if (saved === 'winden') saved = 'forest'; // renamed
+    if (saved === 'winden') { // renamed
+      saved = 'forest';
+      Store.set(SCENE_KEY, saved);
+    }
     this.current = SCENES[saved] ? saved : 'forest';
     this.swatchesDrawn = false;
     this.lastSize = '';
@@ -1434,8 +1437,8 @@ class Scenery {
 
 const PICTURE_FEED_VERSION = 2; // bump when the worker's list format changes, to skip stale caches
 const PICTURE_SOURCES = {
-  apod: { name: 'space picture' },
-  bing: { name: 'photo' }
+  apod: { who: 'NASA', picture: 'NASA\u2019s space picture' },
+  bing: { who: 'Bing', picture: 'Bing\u2019s photo' }
 };
 
 class Wallpaper {
@@ -1454,7 +1457,10 @@ class Wallpaper {
     this.lists = {}; // recent pictures per source
     this.shownSource = null; // the source on screen, which differs from prefs.source after a fallback
     this.current = null;
+    this.currentSrc = null;
     this.gridBuilt = false;
+    this.gridWanted = false; // the sheet has been opened, so keep the thumbnails up to date
+    this.gridSource = null;
     this.onChange = null;
 
     this.els = {
@@ -1470,14 +1476,16 @@ class Wallpaper {
       captionLink: document.getElementById('captionLink')
     };
     this.defaultStatus = this.els.status?.textContent || '';
+    this.note = null; // why the picture on screen isn't from the chosen source
 
     this.els.sources.forEach(input => input.addEventListener('change', () => {
       if (!input.checked) return;
       this.prefs.source = input.value;
       this.prefs.pick = null;
       this.savePrefs();
-      this.gridBuilt = false;
-      this.prefs.source === 'scene' ? this.useScene() : this.refresh({ buildGrid: true });
+      this.note = null;
+      this.setStatus(null);
+      this.prefs.source === 'scene' ? this.useScene() : this.refresh();
     }));
     this.els.dark?.addEventListener('change', () => {
       this.prefs.preferDark = this.els.dark.checked;
@@ -1494,7 +1502,7 @@ class Wallpaper {
       this.prefs.dim = parseInt(this.els.dim.value, 10);
       this.savePrefs();
       this.applyDim();
-      if (this.current && this.stats[this.current.id]) this.applyLook(this.stats[this.current.id]);
+      if (this.current && this.stats[this.current.id]) this.saveLook(this.applyLook(this.stats[this.current.id]));
     });
 
     this.syncControls();
@@ -1524,7 +1532,7 @@ class Wallpaper {
   }
 
   setStatus(text) {
-    if (this.els.status) this.els.status.textContent = text || this.defaultStatus;
+    if (this.els.status) this.els.status.textContent = text || this.note || this.defaultStatus;
   }
 
   applyDim() {
@@ -1559,9 +1567,10 @@ class Wallpaper {
 
   // Today's picture from the chosen source; if that source doesn't answer, the other
   // one; if neither does, a painted scene. Each fallback says so.
-  async refresh({ buildGrid = false } = {}) {
+  async refresh() {
     const source = this.prefs.source;
     if (source === 'scene') return;
+    this.note = null;
     this.setStatus(null);
     const order = [source, ...Object.keys(PICTURE_SOURCES).filter(s => s !== source)];
     for (const candidate of order) {
@@ -1581,19 +1590,19 @@ class Wallpaper {
         }
         if (!shown) throw new Error('no picture loaded');
         if (candidate !== source) {
-          const who = { apod: 'NASA\'s feed', bing: 'Bing' }[source];
-          const what = { apod: 'NASA\'s space picture', bing: 'Bing\'s photo' }[candidate];
-          this.setStatus(`${who} didn't answer, so ${what} of the day is showing instead.`);
-          window.app?.toast?.('Picture of the day.', source === 'apod' ? 'NASA didn\u2019t answer, so this one is from Bing.' : 'Bing didn\u2019t answer, so this one is from NASA.');
+          const wanted = PICTURE_SOURCES[source], used = PICTURE_SOURCES[candidate];
+          this.note = `${wanted.who} didn\u2019t answer, so ${used.picture} of the day is showing instead.`;
+          this.setStatus(null);
+          window.app?.toast?.('Picture of the day.', `${wanted.who} didn\u2019t answer, so this one is from ${used.who}.`);
         }
-        if (buildGrid) this.renderGrid(true);
         return;
       } catch {
         if (this.prefs.source !== source) return;
       }
     }
     this.useScene();
-    this.setStatus('Couldn\'t load a picture of the day, so a painted scene is showing. It tries again each time you open the site.');
+    this.note = 'Couldn\u2019t load a picture of the day, so a painted scene is showing. It tries again each time you open the site.';
+    this.setStatus(null);
     window.app?.toast?.('Picture of the day.', 'Couldn\u2019t load one right now, so this is a painted scene.');
   }
 
@@ -1771,18 +1780,23 @@ class Wallpaper {
     }
     if (this.prefs.source !== source) return;
     this.current = img;
+    this.currentSrc = src;
     this.shownSource = from;
     this.root.style.setProperty('--wall', `url("${src}")`);
     this.root.dataset.wall = 'on';
-    const look = this.applyLook(stats);
-    Store.set(LOOK_KEY, { ...look, wall: src, dim: this.prefs.dim });
+    this.saveLook(this.applyLook(stats));
     this.scenery.markActive(false);
     this.updateCaption();
     this.renderGrid();
   }
 
+  saveLook(look) {
+    if (this.currentSrc) Store.set(LOOK_KEY, { ...look, wall: this.currentSrc, dim: this.prefs.dim });
+  }
+
   useScene() {
     this.current = null;
+    this.currentSrc = null;
     this.shownSource = null;
     this.root.dataset.wall = 'off';
     this.root.dataset.tone = 'dark';
@@ -1823,16 +1837,18 @@ class Wallpaper {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 
-  // Thumbnails of recent pictures; built the first time the sheet opens
+  // Thumbnails of recent pictures from the source on screen; built the first time the sheet opens
   renderGrid(build = false) {
     const grid = this.els.grid;
     if (!grid) return;
+    if (build) this.gridWanted = true;
     if (!this.photoOn || !this.images.length) {
       grid.replaceChildren();
       this.gridBuilt = false;
       return;
     }
-    if (!this.gridBuilt && build) {
+    if (this.gridSource !== this.shownSource) this.gridBuilt = false;
+    if (!this.gridBuilt && this.gridWanted) {
       // An even count, so the two-column grid never ends on a lone thumbnail
       const shown = this.images.length > 1 ? this.images.slice(0, this.images.length - (this.images.length % 2)) : this.images;
       grid.replaceChildren(...shown.map(img => {
@@ -1851,11 +1867,12 @@ class Wallpaper {
           this.prefs.pick = { id: img.id, day: new Date().toDateString() };
           this.savePrefs();
           this.setStatus(null);
-          this.show(img).catch(() => this.setStatus('That picture didn\'t load. Try another one.'));
+          this.show(img, this.shownSource || this.prefs.source).catch(() => this.setStatus('That picture didn\'t load. Try another one.'));
         });
         return btn;
       }));
       this.gridBuilt = true;
+      this.gridSource = this.shownSource;
     }
     grid.querySelectorAll('.thumb').forEach(btn => {
       btn.setAttribute('aria-pressed', String(btn.dataset.id === this.current?.id));
@@ -2071,6 +2088,8 @@ const ENGINES = {
   youtube:    { label: 'YouTube',    url: 'https://www.youtube.com/results?search_query=' }
 };
 const MAX_SHORTCUTS = 12;
+const COMMON_TLDS = new Set(('com net org edu gov mil int info biz dev app xyz site online store tech blog '
+  + 'page cloud art design news shop live wiki social email link one top fun club space world').split(' '));
 
 class Home {
   constructor() {
@@ -2166,9 +2185,17 @@ class Home {
     const t = text.trim();
     if (!t || /\s/.test(t)) return null;
     if (/^https?:\/\//i.test(t)) return Home.normalizeUrl(t);
-    if (/^localhost(:\d+)?([/?#].*)?$/i.test(t)) return `http://${t}`;
-    if (/^([a-z0-9-]+\.)+[a-z]{2,}(:\d+)?([/?#].*)?$/i.test(t)) return Home.normalizeUrl(`https://${t}`);
+    if (/^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#].*)?$/i.test(t)) return Home.normalizeUrl(`http://${t}`);
+    const host = /^(?:[a-z0-9-]+\.)+([a-z]{2,})(:\d+)?([/?#].*)?$/i.exec(t);
+    if (host && (/^www\./i.test(t) || Home.isTld(host[1]))) return Home.normalizeUrl(`https://${t}`);
     return null;
+  }
+
+  // Country codes and the common generic endings, so "node.js" or "Dr.Smith" stays a search
+  static isTld(tld) {
+    const t = tld.toLowerCase();
+    if (t.length === 2) return !['js', 'ts', 'py', 'md'].includes(t);
+    return COMMON_TLDS.has(t);
   }
 
   static normalizeUrl(raw) {
@@ -2466,8 +2493,9 @@ class App {
         return;
       }
       if (this.view === 'search') {
-        // On the search view, typing anywhere goes into the search bar
-        if (e.key.length === 1 && !e.repeat && !document.querySelector('.sheet.open')) this.home.focus();
+        // On the search view, typing anywhere goes into the search bar (Space stays with
+        // the focused button)
+        if (e.key.length === 1 && e.key !== ' ' && !e.repeat && !document.querySelector('.sheet.open')) this.home.focus();
         return;
       }
       if (e.repeat) return;

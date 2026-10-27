@@ -53,6 +53,7 @@
 
   --gutter-l: max(32px, env(safe-area-inset-left, 0px));
   --gutter-r: max(32px, env(safe-area-inset-right, 0px));
+  --head: 48px; /* masthead height below the top padding; sheets and toasts start under it */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -752,18 +753,23 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
 /* ── Toasts ──────────────────────────────────────────────────────────────── */
 
+/* Top right, under the index, where neither view puts anything; beside an open sheet */
 .toast-zone {
   position: fixed;
   z-index: 90;
-  top: calc(max(26px, env(safe-area-inset-top, 0px)) + 52px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(440px, calc(100vw - 32px));
+  top: calc(max(26px, env(safe-area-inset-top, 0px)) + var(--head) + 12px);
+  right: var(--gutter-r);
+  width: min(400px, calc(100vw - 32px));
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   pointer-events: none;
+  transition: right 0.3s var(--ease);
+}
+body:has(.sheet.open) .toast-zone {
+  right: calc(min(460px, 100vw) + 24px);
+  width: min(400px, calc(100vw - min(460px, 100vw) - 48px));
 }
 .toast {
   padding: 12px 18px;
@@ -773,7 +779,6 @@ button, a, input, textarea, select { touch-action: manipulation; }
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35);
   font-size: 14px;
   line-height: 1.45;
-  text-align: center;
   animation: toastIn 0.4s var(--ease) both;
 }
 .toast em {
@@ -791,7 +796,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 .sheet {
   position: fixed;
   z-index: 40;
-  top: calc(max(26px, env(safe-area-inset-top, 0px)) + 48px);
+  top: calc(max(26px, env(safe-area-inset-top, 0px)) + var(--head));
   right: 0;
   bottom: 0;
   width: min(460px, 100vw);
@@ -1531,6 +1536,13 @@ kbd {
   .caption { max-width: 240px; }
 }
 
+/* The index gets its own row once it no longer fits beside the views */
+@media (max-width: 960px) {
+  :root { --head: 88px; }
+  .masthead { flex-wrap: wrap; }
+  .index { width: 100%; }
+}
+
 @media (max-height: 720px) and (min-width: 721px) {
   .poster { padding-top: 20px; }
   .quote blockquote { font-size: 20px; }
@@ -1602,6 +1614,20 @@ kbd {
     transform: translateY(100%);
   }
   .sheet-title { font-size: 38px; }
+
+  /* At the bottom on phones, where the search bar takes the full width at the top */
+  .toast-zone,
+  body:has(.sheet.open) .toast-zone {
+    top: auto;
+    bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 8px);
+    left: 50%;
+    right: auto;
+    width: min(400px, calc(100vw - 32px));
+    transform: translateX(-50%);
+    align-items: center;
+  }
+  .toast { text-align: center; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
 
   /* Keep iOS from zooming into focused inputs */
   input, textarea, select { font-size: 16px !important; }
