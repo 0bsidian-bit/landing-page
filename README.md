@@ -1,62 +1,52 @@
-# 0bsidian AI
+# 0bsidian
 
-Personal website and productivity dashboard for [Dr. Lokesh Tewari](https://lokeshtewari.uk).
+A pomodoro timer set on a new picture every day, at [lokeshtewari.uk](https://lokeshtewari.uk).
 
-Built entirely on Cloudflare — no frameworks, no build step, just clean code.
+The picture is NASA's Astronomy Picture of the Day (or Bing's photo of the day, or a scene painted in the browser). When a focus session starts, the picture goes grey and out of focus, unobserved, and resolves back into colour as the session runs. Finish the session and you see all of it.
 
----
-
-## What It Does
-
-### Two Timer Modes
-
-**Focus Mode (default)** — counts up from zero. Press play to start focusing; press pause to automatically begin a break countdown (also counting up from zero). Press play again to end the break and start a new focus session. Both focus and break durations are logged to the session history.
-
-**Pomodoro Mode** — classic countdown timer with a circular progress ring. Focus and rest periods only (no long break). Timer name is editable by clicking directly on it.
-
-Both modes support inline timer rename, a master sound toggle, and warn before the tab is closed if the timer is running.
-
-### iMessage-Style AI Chat
-Conversational AI chat powered by Cloudflare Workers AI (`llama-3.1-8b`). Messages appear as styled bubbles — user on the right, AI on the left. Memory persists across sessions via localStorage. Use the menu to clear memory or clear the chat.
-
-### Study Buddy
-A desktop companion that lives in the top-left corner. 10 characters with productivity-archetype personalities (focused, strategic, calm, analytical, etc.). Thoughts are generated from your current task list and pomodoro stats. Appears below the ASCII art so speech is always readable.
-
-### Task Manager
-Organise work by subject with colour coding. Auto-saves to localStorage. Surfaces pending tasks to the Study Buddy.
-
-### Session Log
-Every completed focus or pomodoro session is logged with name, duration, and timestamp. Inline rename and delete. Up to 100 entries.
-
-### People Studying Now
-Live counter showing active sessions on the site. Updates every 30 s via heartbeat (90 s TTL in KV).
-
-### Developer Message
-Click **Dr. Lokesh Tewari** in the footer to read a message from the developer. Fetched live from `message.md` in this repo.
-
-### Privacy First
-No analytics, no trackers, no cookies beyond Turnstile. Tasks, timers, chat history, and buddy choice live only in `localStorage`. KV entries expire automatically. No PII stored.
-
-### PWA / Installable
-Ships a `manifest.webmanifest` and service worker. Installs as a standalone app. The install prompt appears as a small icon in the topbar — only visible on browsers where the PWA is not already installed.
+Built on Cloudflare Workers. No framework and no build step.
 
 ---
 
-## Features at a Glance
+## Features
 
-| Feature | Details |
+**The timer.** Focus, short break and long break, with a long break after a set number of sessions (4 by default). Skip, reset, optional auto-start for breaks and for the next session, and a daily focus goal. The timer survives a refresh or a closed tab: a session that ran out while the page was closed is logged when you come back.
+
+**The picture of the day.**
+- *Space*: NASA's APOD, public-domain images only (anything with a named copyright holder is skipped).
+- *Earth*: Bing's photo of the day.
+- *Painted*: four built-in canvas scenes. Winden (a foggy forest), Event horizon (a black hole and its accretion disk), Obsidian and Glacier.
+
+The page reads each picture and picks light or dark text and an accent colour to match. "Prefer dark pictures" falls back to the newest dark picture of the past few weeks on a bright day. There's also a dim slider and a switch for the develop effect.
+
+**Tasks.** Add a task with an estimate in pomodoros. The active task shows above the timer, each finished focus session counts towards it, and the sheet estimates when you'll be done, breaks included.
+
+**Today.** Focused time, sessions, day streak, progress to the daily goal, a 24-hour line of the day's sessions and the full history.
+
+**Sounds.** Rain, waves, fan, brown and pink noise, all synthesised in the browser with the Web Audio API. Optionally only while a focus session runs.
+
+**Small things.** Quotes on time and physics (Einstein, Feynman, Heisenberg, Dark). A breathing cue during breaks (4 seconds in, 6 out). The tab's icon turns into a progress ring while a timer runs. Optional system notifications when a timer ends in a background tab. A pop-out mini timer that stays on top (Chromium browsers). Zen mode.
+
+**Keyboard.** `Space` start or pause · `R` reset · `S` skip · `T` tasks · `F` zen mode · `P` pop-out timer
+
+**Privacy.** Tasks, settings and history live only in the browser's `localStorage`. No analytics, ads, cookies or third-party scripts. Pictures are fetched by the worker and passed through, so visitors' browsers never contact NASA or Microsoft.
+
+---
+
+## How it fits together
+
+| File | What it does |
 |---|---|
-| AI Model | `@cf/meta/llama-3.1-8b-instruct` (both chat and companion) |
-| Timer Modes | Focus (count-up) · Pomodoro (countdown + ring) |
-| Timer Persistence | Survives page refresh via wall-clock |
-| Sound | Master toggle in controls column; mechanical tick + bell |
-| Study Buddy | 10 characters, unique teleport effects, productivity personalities |
-| Security | Turnstile verification, rate limiting (10 req/min) |
-| Storage | All data in localStorage — nothing on servers |
+| `index.html` | The page: poster layout, sheets and modals |
+| `styles.css` | All styles. Tokens at the top; `data-tone="light"` flips them for bright pictures |
+| `boot.js` | Runs before first paint and re-applies the last picture's colours |
+| `app.js` | Timer, tasks, history, sounds, scenes, picture of the day |
+| `worker.js` | `/api/wallpaper` (recent pictures) and `/api/wallpaper/image` (image proxy), both edge-cached |
+| `sw.js` | Caches the app shell and handles notification clicks |
 
----
+Fonts are self-hosted: Bodoni Moda for the numerals and headings, Schibsted Grotesk for everything else.
 
-## Running Locally
+## Running locally
 
 ```bash
 git clone https://github.com/0bsidian-bit/landing-page.git
@@ -65,29 +55,19 @@ npm install
 npx wrangler dev
 ```
 
-Worker runs on `http://localhost:8787`. Static files served from the same origin via Wrangler.
+The site runs on `http://localhost:8787`.
 
 ## Deploying
 
-Push to `main` — Cloudflare Workers deploys automatically.
+Push to `main` and Cloudflare deploys it.
 
-### First-time Setup
+Optional settings:
 
-1. Create a [Turnstile widget](https://dash.cloudflare.com/turnstile) and note the site key and secret key
-2. Update the site key in `app.js` (`setupTurnstile` method)
-3. Set the secret key:
-   ```bash
-   npx wrangler secret put TURNSTILE_SECRET
-   ```
-4. Bind a KV namespace named `RATE_LIMIT_KV` in `wrangler.jsonc`
-5. Push to `main`
+- **NASA API key.** Without one the worker uses NASA's shared `DEMO_KEY`, which is rate-limited. Get a free key at [api.nasa.gov](https://api.nasa.gov) and add it with `npx wrangler secret put NASA_API_KEY`.
+- **Bing region.** `BING_MARKET` in `wrangler.jsonc` picks the region for the Earth photo (`en-US`, `en-GB`, `en-IN` and so on).
 
 ---
 
-## Credits
+Design and development by [Dr. Lokesh Tewari](https://lokeshtewari.uk) · social@lokeshtewari.uk
 
-Design and development by [Lokesh Tewari](https://lokeshtewari.uk).
-
-## License
-
-MIT
+MIT licence

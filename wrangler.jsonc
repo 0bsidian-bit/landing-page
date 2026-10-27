@@ -9,16 +9,8 @@
   "assets": {
     "directory": "."
   },
-  "ai": {
-    "binding": "AI"
-  },
   "vars": {
-    "ALLOWED_ORIGINS": "https://lokeshtewari.uk"
-  },
-  "kv_namespaces": [
-    {
-      "binding": "RATE_LIMIT_KV",
-      "id": "1f01369147a6438d95824abcb8d89126"
-    }
-  ]
+    // Which Bing region's photo of the day to show, e.g. en-US, en-GB, en-IN
+    "BING_MARKET": "en-US"
+  }
 }

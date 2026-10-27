@@ -1,3 +1,11 @@
+# Not served as static files
 node_modules
 .wrangler
 .git
+.gitignore
+.assetsignore
+worker.js
+wrangler.jsonc
+package.json
+package-lock.json
+README.md
