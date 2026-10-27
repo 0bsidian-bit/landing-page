@@ -60,16 +60,24 @@ Anything else sent to the image route gets a `400`. The worker only accepts `GET
 | File | What it does |
 |---|---|
 | `index.html` | The page: poster layout, sheets and modals |
+| `about.html`, `about.css` | The About page at `/about`: who runs the site and how to get in touch |
 | `styles.css` | All styles. Tokens at the top; `data-tone="light"` flips them for bright pictures |
 | `boot.js` | Runs before first paint and re-applies the last picture's colours, so nothing flashes |
 | `app.js` | Search and shortcuts, clock, timer, tasks, history, sounds, painted scenes, picture of the day, pop-out timer |
 | `worker.js` | The two picture routes above |
 | `sw.js` | Caches the app shell for offline use and handles notification clicks |
 | `_headers` | Security headers and the Content Security Policy (everything is same-origin) |
+| `robots.txt`, `sitemap.xml`, `llms.txt` | Open to all search engines and AI crawlers; `llms.txt` is a short summary for AI assistants |
 | `fonts/` | Bodoni Moda for the numerals and headings, Schibsted Grotesk for everything else |
 | `icons/`, `favicon.svg` | The triquetra mark at app-icon sizes |
 
 When you change `styles.css`, `app.js` or `boot.js`, bump its `?v=` number in `index.html` and the matching entry in `sw.js`, and bump `CACHE` in `sw.js`, so returning visitors get the new files. When the worker's picture list changes shape, bump `PICTURE_FEED_VERSION` in `app.js` so browsers skip the old cached list.
+
+## Search engines and AI assistants
+
+Every crawler is allowed, search engines and AI alike. Both pages carry schema.org data (`WebSite` and `Person` on the homepage, `ProfilePage` on `/about`) so search results and AI answers tie the site to its author. The worker marks its own responses `noindex`, so the picture list and passed-through images stay out of search results.
+
+To get indexed sooner, add the site to [Google Search Console](https://search.google.com/search-console) and [Bing Webmaster Tools](https://www.bing.com/webmasters) (Bing's index also feeds ChatGPT search and Copilot), then submit `https://lokeshtewari.uk/sitemap.xml` in each.
 
 ## Using it as your homepage
 

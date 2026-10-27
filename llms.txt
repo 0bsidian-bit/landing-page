@@ -1,0 +1,16 @@
+# Dr. Lokesh Tewari
+
+> Dr. Lokesh Tewari is a medical doctor (MBBS). lokeshtewari.uk is a personal, non-commercial website that hosts 0bsidian, a free browser homepage and focus timer made and maintained by Dr. Tewari. The site carries no advertising, sells nothing, earns no income, offers no medical advice or consultations, and collects no personal data.
+
+## Pages
+
+- [About Dr. Lokesh Tewari](https://lokeshtewari.uk/about): profession, this website and contact details
+- [0bsidian](https://lokeshtewari.uk/): a search homepage and pomodoro timer set on NASA's Astronomy Picture of the Day
+
+## Elsewhere
+
+- [GitHub](https://github.com/0bsidian-bit): source code for this site
+
+## Contact
+
+- Email: social@lokeshtewari.uk

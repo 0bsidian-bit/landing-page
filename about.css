@@ -1,0 +1,206 @@
+@font-face {
+  font-family: 'Bodoni Moda';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/bodoni-moda.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Bodoni Moda';
+  font-style: italic;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/bodoni-moda-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Schibsted Grotesk';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/schibsted-grotesk.woff2') format('woff2');
+}
+
+/* The About page: one printed sheet in the site's type, dark like the app, light on request */
+:root {
+  color-scheme: dark;
+  --bg: #0b0a0e;
+  --ink: #f3f1ec;
+  --ink-2: rgba(243, 241, 236, 0.78);
+  --ink-3: rgba(243, 241, 236, 0.55);
+  --line: rgba(243, 241, 236, 0.16);
+  --accent: #f2c94c;
+  --font-display: 'Bodoni Moda', 'Bodoni 72', Didot, 'Times New Roman', serif;
+  --font-ui: 'Schibsted Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f5f3ef;
+    --ink: #17161b;
+    --ink-2: rgba(23, 22, 27, 0.8);
+    --ink-3: rgba(23, 22, 27, 0.6);
+    --line: rgba(23, 22, 27, 0.16);
+    --accent: #7a5c00;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+a:hover { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.page {
+  max-width: 760px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(48px, 10vh, 96px);
+  padding-block: max(28px, env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+  margin: 0 auto;
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+.brand-mark {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.1;
+}
+.brand-name,
+.site,
+.kicker,
+.record dt,
+.foot {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.brand-name { letter-spacing: 0.4em; }
+.site { color: var(--ink-3); }
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.kicker {
+  margin: 0 0 -28px;
+  color: var(--accent);
+}
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(46px, 11vw, 92px);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.lede {
+  margin: -16px 0 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(22px, 4vw, 30px);
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+
+/* Set out like an entry in a register: label, then value, on hairlines */
+.record {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.record div {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 4px 24px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+.record dt {
+  padding-top: 0.25em;
+  color: var(--ink-3);
+}
+.record dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+section { max-width: 62ch; }
+h2 {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.2;
+}
+section p { margin: 0 0 14px; color: var(--ink-2); }
+section p:last-child { margin-bottom: 0; }
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
+}
+.foot a { text-decoration: none; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .record div { grid-template-columns: minmax(0, 1fr); }
+  .record dt { padding-top: 0; }
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --ink: #000000;
+    --ink-2: #1a1a1a;
+    --ink-3: #555555;
+    --line: #cccccc;
+    --accent: #000000;
+  }
+  .page { min-height: 0; gap: 32px; }
+}
