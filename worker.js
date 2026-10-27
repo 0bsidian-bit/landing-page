@@ -15,7 +15,7 @@ const CONFIG = {
   BING_ID: /^OHR\.[A-Za-z0-9_-]{1,120}$/,
   // NASA's APOD feed (the old api.nasa.gov endpoint is being archived); newest 25 entries
   APOD_API: "https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=25",
-  APOD_IMAGE_HOSTS: ["science.nasa.gov", "assets.science.nasa.gov", "apod.nasa.gov"],
+  APOD_IMAGE_HOST: /(^|\.)nasa\.gov$/i, // science.nasa.gov, assets.science.nasa.gov, apod.nasa.gov, …
   USER_AGENT: "0bsidian/1.0 (+https://lokeshtewari.uk)",
 };
 
@@ -126,14 +126,16 @@ class Apod {
     return text.length > 180 ? `${text.slice(0, 180).replace(/\s+\S*$/, "")}…` : text;
   }
 
-  // Only image files on NASA's own hosts are passed through
+  // Only images on NASA's own hosts are passed through; the proxy also checks the
+  // response really is an image
   static imageSource(raw) {
-    if (typeof raw !== "string" || raw.length > 400) return null;
+    if (typeof raw !== "string" || raw.length > 500) return null;
     let url;
     try { url = new URL(raw.replace(/^http:/, "https:")); } catch { return null; }
-    if (url.protocol !== "https:" || !CONFIG.APOD_IMAGE_HOSTS.includes(url.hostname)) return null;
-    if (!/\.(?:jpe?g|png|webp)$/i.test(url.pathname)) return null;
-    url.search = "";
+    if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
+    if (!CONFIG.APOD_IMAGE_HOST.test(url.hostname)) return null;
+    // The site header's logo, which the feed returns when it can't find the picture
+    if (/nasa-logo|\/themes\//i.test(url.pathname)) return null;
     url.hash = "";
     return url.toString();
   }
@@ -144,33 +146,35 @@ class Apod {
     });
     if (!res.ok) throw new Error(`APOD ${res.status}`);
     const data = await res.json();
-    // Only pictures with no copyright holder, which NASA publishes as public domain
-    const publicDomain = d => {
-      const holder = Apod.text(d.copyright, 200);
-      return !holder || /public domain/i.test(holder);
-    };
     return (Array.isArray(data) ? data : [])
-      .filter(d => d && d.media_type === "image" && publicDomain(d))
       .map(Apod.parse)
       .filter(Boolean)
-      .slice(0, 10);
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      .slice(0, 12);
   }
 
   static parse(d) {
+    if (!d || typeof d !== "object") return null;
+    // hdurl is the full image (a still frame on video days); url is usually the article
     const image = Apod.imageSource(d.hdurl) || Apod.imageSource(d.url);
-    const date = typeof d.date === "string" ? d.date.slice(0, 10) : "";
-    if (!image || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-    const compact = date.replace(/-/g, "");
+    if (!image) return null;
+    const ymd = /(\d{4})-(\d{2})-(\d{2})/.exec(String(d.date || ""));
+    const compact = ymd ? `${ymd[1]}${ymd[2]}${ymd[3]}` : null;
     const src = imageUrl({ source: "apod", u: image });
-    const link = [d.permalink, d.url].find(l => typeof l === "string" && /^https:\/\/(science|apod)\.nasa\.gov\//.test(l))
-      || `https://apod.nasa.gov/apod/ap${compact.slice(2)}.html`;
-    const credit = Apod.text(d.credit, 160).replace(/^(image\s+)?credits?(\s+and\s+copyright)?\s*:\s*/i, "");
+    const link = [d.permalink, d.url, d.basic_html_url].find(l => typeof l === "string" && /^https:\/\/([a-z0-9-]+\.)*nasa\.gov\//i.test(l))
+      || (compact ? `https://apod.nasa.gov/apod/ap${compact.slice(2)}.html` : "https://apod.nasa.gov/apod/");
+    const credit = Apod.text(d.credit, 160).replace(/^(image\s+)?credits?(\s*(and|&)\s*copyright)?\s*:\s*/i, "");
+    const holder = Apod.text(d.copyright, 120);
+    const owned = holder && !/public domain/i.test(holder) && !credit.toLowerCase().includes(holder.toLowerCase());
+    const creditLine = [credit && `Image: ${credit}`, owned && `© ${holder}`].filter(Boolean).join(" · ") || "Image: NASA";
+    const video = String(d.media_type || "").toLowerCase() === "video";
+    const caption = Apod.firstSentence(Apod.text(d.explanation, 1500));
     return {
-      id: `apod:${compact}`,
+      id: `apod:${compact || d.post_id || image.slice(-48)}`,
       date: compact,
       title: Apod.text(d.title, 200),
-      caption: Apod.firstSentence(Apod.text(d.explanation, 1500)),
-      credit: `Image: ${credit || "NASA"}.`,
+      caption: video ? `${caption} (A video on NASA's site; this is a still from it.)` : caption,
+      credit: `${creditLine}.`,
       link,
       src: { thumb: src, sd: src, hd: src, portrait: src },
     };

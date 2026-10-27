@@ -1,9 +1,9 @@
-const CACHE = '0bsidian-v6';
+const CACHE = '0bsidian-v7';
 // Exact URLs, query strings included, so a new ?v= in index.html fetches fresh copies
 const SHELL = [
   '/',
-  '/styles.css?v=17',
-  '/app.js?v=9',
+  '/styles.css?v=18',
+  '/app.js?v=10',
   '/boot.js?v=1',
   '/favicon.svg',
   '/manifest.webmanifest',
