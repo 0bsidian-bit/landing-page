@@ -61,10 +61,9 @@ The site runs on `http://localhost:8787`.
 
 Push to `main` and Cloudflare deploys it.
 
-Optional settings:
+The space pictures come from NASA's `science.nasa.gov/wp-json/wp/v2/apod-basic` feed, which needs no API key. (The older `api.nasa.gov/planetary/apod` endpoint is being archived on 1 December 2026.)
 
-- **NASA API key.** Without one the worker uses NASA's shared `DEMO_KEY`, which is rate-limited. Get a free key at [api.nasa.gov](https://api.nasa.gov) and add it with `npx wrangler secret put NASA_API_KEY`.
-- **Bing region.** `BING_MARKET` in `wrangler.jsonc` picks the region for the Earth photo (`en-US`, `en-GB`, `en-IN` and so on).
+Optional: `BING_MARKET` in `wrangler.jsonc` picks the region for the Earth photo (`en-US`, `en-GB`, `en-IN` and so on).
 
 ---
 

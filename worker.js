@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker backend
- * Serves the photo of the day (NASA's Astronomy Picture of the Day, or Bing's) through
+ * Serves the picture of the day (NASA's Astronomy Picture of the Day, or Bing's) through
  * this site, so visitors' browsers never contact a third party and the page can read
  * each photo's colours. Everything else is static.
  */
@@ -13,10 +13,10 @@ const CONFIG = {
   BING_DAYS: 8,
   BING_RESOLUTIONS: ["UHD", "1920x1080", "1080x1920", "400x240"],
   BING_ID: /^OHR\.[A-Za-z0-9_-]{1,120}$/,
-  APOD_API: "https://api.nasa.gov/planetary/apod",
-  APOD_IMAGES: "https://apod.nasa.gov/apod/image/",
-  APOD_DAYS: 21,             // look back far enough to find several public-domain images
-  APOD_PATH: /^\d{4}\/[A-Za-z0-9._-]{1,140}\.(?:jpe?g|png)$/i,
+  // NASA's APOD feed (the old api.nasa.gov endpoint is being archived); newest 25 entries
+  APOD_API: "https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=25",
+  APOD_IMAGE_HOSTS: ["science.nasa.gov", "assets.science.nasa.gov", "apod.nasa.gov"],
+  USER_AGENT: "0bsidian/1.0 (+https://lokeshtewari.uk)",
 };
 
 class HttpUtils {
@@ -104,57 +104,80 @@ class Bing {
 }
 
 class Apod {
-  // The first sentence of NASA's explanation, as a caption
-  static firstSentence(text) {
-    const clean = clip(text, 1200).replace(/\s+/g, " ");
-    const match = /^(.{20,220}?[.?!])(\s|$)/.exec(clean);
-    if (match) return match[1];
-    return clean.length > 180 ? `${clean.slice(0, 180).replace(/\s+\S*$/, "")}…` : clean;
+  // The feed's text fields are HTML; reduce them to plain text
+  static text(html, max) {
+    if (typeof html !== "string") return "";
+    const named = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“", ndash: "–", mdash: "—", hellip: "…" };
+    return html
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+      .replace(/&([a-z]+);/gi, (m, n) => named[n.toLowerCase()] ?? m)
+      .replace(/\s+/g, " ")
+      .replace(/\s+([,.;:!?])/g, "$1")
+      .trim()
+      .slice(0, max);
   }
 
-  static async list(env) {
-    const key = typeof env?.NASA_API_KEY === "string" && env.NASA_API_KEY ? env.NASA_API_KEY : "DEMO_KEY";
-    const start = new Date(Date.now() - CONFIG.APOD_DAYS * 86400000).toISOString().slice(0, 10);
-    const res = await fetch(`${CONFIG.APOD_API}?api_key=${encodeURIComponent(key)}&start_date=${start}`, {
-      headers: { "Accept": "application/json" },
+  // The first sentence of NASA's explanation, as a caption
+  static firstSentence(text) {
+    const match = /^(.{20,220}?[.?!])(\s|$)/.exec(text);
+    if (match) return match[1];
+    return text.length > 180 ? `${text.slice(0, 180).replace(/\s+\S*$/, "")}…` : text;
+  }
+
+  // Only image files on NASA's own hosts are passed through
+  static imageSource(raw) {
+    if (typeof raw !== "string" || raw.length > 400) return null;
+    let url;
+    try { url = new URL(raw.replace(/^http:/, "https:")); } catch { return null; }
+    if (url.protocol !== "https:" || !CONFIG.APOD_IMAGE_HOSTS.includes(url.hostname)) return null;
+    if (!/\.(?:jpe?g|png|webp)$/i.test(url.pathname)) return null;
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  }
+
+  static async list() {
+    const res = await fetch(CONFIG.APOD_API, {
+      headers: { "Accept": "application/json", "User-Agent": CONFIG.USER_AGENT },
     });
     if (!res.ok) throw new Error(`APOD ${res.status}`);
     const data = await res.json();
-    // Only images with no copyright holder listed, which NASA publishes as public domain
+    // Only pictures with no copyright holder, which NASA publishes as public domain
+    const publicDomain = d => {
+      const holder = Apod.text(d.copyright, 200);
+      return !holder || /public domain/i.test(holder);
+    };
     return (Array.isArray(data) ? data : [])
-      .filter(d => d && d.media_type === "image" && !d.copyright)
-      .reverse()
+      .filter(d => d && d.media_type === "image" && publicDomain(d))
       .map(Apod.parse)
       .filter(Boolean)
       .slice(0, 10);
   }
 
-  static path(url) {
-    if (typeof url !== "string" || !url.replace(/^http:/, "https:").startsWith(CONFIG.APOD_IMAGES)) return null;
-    const path = url.replace(/^https?:\/\/apod\.nasa\.gov\/apod\/image\//, "");
-    return CONFIG.APOD_PATH.test(path) ? path : null;
-  }
-
   static parse(d) {
-    const sd = Apod.path(d.url);
-    if (!sd || !/^\d{4}-\d{2}-\d{2}$/.test(d.date || "")) return null;
-    const hd = Apod.path(d.hdurl) || sd;
-    const src = (path) => imageUrl({ source: "apod", path });
-    const compact = d.date.replace(/-/g, "");
+    const image = Apod.imageSource(d.hdurl) || Apod.imageSource(d.url);
+    const date = typeof d.date === "string" ? d.date.slice(0, 10) : "";
+    if (!image || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+    const compact = date.replace(/-/g, "");
+    const src = imageUrl({ source: "apod", u: image });
+    const link = [d.permalink, d.url].find(l => typeof l === "string" && /^https:\/\/(science|apod)\.nasa\.gov\//.test(l))
+      || `https://apod.nasa.gov/apod/ap${compact.slice(2)}.html`;
+    const credit = Apod.text(d.credit, 160).replace(/^(image\s+)?credits?(\s+and\s+copyright)?\s*:\s*/i, "");
     return {
-      id: `apod:${sd}`,
+      id: `apod:${compact}`,
       date: compact,
-      title: clip(d.title, 200),
-      caption: Apod.firstSentence(d.explanation),
-      credit: "NASA, public domain",
-      link: `https://apod.nasa.gov/apod/ap${compact.slice(2)}.html`,
-      src: { thumb: src(sd), sd: src(sd), hd: src(hd), portrait: src(sd) },
+      title: Apod.text(d.title, 200),
+      caption: Apod.firstSentence(Apod.text(d.explanation, 1500)),
+      credit: `Image: ${credit || "NASA"}.`,
+      link,
+      src: { thumb: src, sd: src, hd: src, portrait: src },
     };
   }
 
   static image(params) {
-    const path = params.get("path") || "";
-    return CONFIG.APOD_PATH.test(path) ? `${CONFIG.APOD_IMAGES}${path}` : null;
+    return Apod.imageSource(params.get("u") || "");
   }
 }
 
