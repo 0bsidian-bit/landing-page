@@ -3,16 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>0bsidian</title>
-<meta name="description" content="A homepage and pomodoro timer set on a new space picture every day. Search the web, keep your shortcuts, and focus while the picture resolves from grey to full colour.">
-<link rel="canonical" href="https://lokeshtewari.uk">
+<title>0bsidian · Dr. Lokesh Tewari</title>
+<meta name="description" content="0bsidian, by Dr. Lokesh Tewari: a free homepage and focus timer set on a new space picture every day. Search the web, keep your shortcuts, and focus while the picture resolves from grey to full colour.">
+<link rel="canonical" href="https://lokeshtewari.uk/">
+<link rel="author" href="/about">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://lokeshtewari.uk">
-<meta property="og:title" content="0bsidian">
-<meta property="og:description" content="A pomodoro timer set on a new space picture every day. The picture resolves into colour as you focus.">
+<meta property="og:url" content="https://lokeshtewari.uk/">
+<meta property="og:site_name" content="lokeshtewari.uk">
+<meta property="og:title" content="0bsidian · Dr. Lokesh Tewari">
+<meta property="og:description" content="A free homepage and focus timer set on a new space picture every day, by Dr. Lokesh Tewari.">
+<meta property="og:image" content="https://lokeshtewari.uk/icons/icon-512.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="0bsidian">
-<meta name="twitter:description" content="A pomodoro timer set on a new space picture every day. The picture resolves into colour as you focus.">
+<meta name="twitter:title" content="0bsidian · Dr. Lokesh Tewari">
+<meta name="twitter:description" content="A free homepage and focus timer set on a new space picture every day, by Dr. Lokesh Tewari.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -25,7 +28,34 @@
 <link rel="preload" href="/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css?v=19">
 <script src="/boot.js?v=1"></script>
-<script src="/app.js?v=11" defer></script>
+<script src="/app.js?v=12" defer></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://lokeshtewari.uk/#website",
+      "url": "https://lokeshtewari.uk/",
+      "name": "0bsidian",
+      "description": "A free browser homepage and focus timer set on NASA's Astronomy Picture of the Day.",
+      "author": { "@id": "https://lokeshtewari.uk/#person" },
+      "publisher": { "@id": "https://lokeshtewari.uk/#person" }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://lokeshtewari.uk/#person",
+      "name": "Lokesh Tewari",
+      "honorificPrefix": "Dr.",
+      "description": "Medical doctor (MBBS) and maker of 0bsidian, a free browser homepage and focus timer.",
+      "url": "https://lokeshtewari.uk/about",
+      "email": "mailto:social@lokeshtewari.uk",
+      "hasOccupation": { "@type": "Occupation", "name": "Medical doctor" },
+      "sameAs": ["https://www.linkedin.com/in/lokesh-tewari777/", "https://github.com/0bsidian-bit"]
+    }
+  ]
+}
+</script>
 </head>
 <body>
   <!-- The picture is drawn twice: a soft grey print underneath and the sharp colour print on top.
@@ -321,7 +351,7 @@
         <h3>privacy</h3>
         <p>Tasks, shortcuts, settings and history are saved in this browser and nowhere else. Searches go straight from your browser to the search engine you pick. There's no sign-up, analytics, ads or cookies. Pictures are fetched by this site's server and passed on to you, so your browser never connects to NASA or Microsoft.</p>
         <h3>made by</h3>
-        <p>Dr. Lokesh Tewari. The code is <a href="https://github.com/0bsidian-bit/landing-page" target="_blank" rel="noopener">on GitHub</a>.</p>
+        <p><a href="/about">Dr. Lokesh Tewari</a>, a medical doctor. Find Dr. Tewari <a href="https://www.linkedin.com/in/lokesh-tewari777/" target="_blank" rel="noopener me">on LinkedIn</a>, and the code <a href="https://github.com/0bsidian-bit/landing-page" target="_blank" rel="noopener">on GitHub</a>.</p>
       </div>
       <div class="email-row">
         <span class="label">email</span>

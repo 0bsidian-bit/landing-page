@@ -24,6 +24,7 @@ class HttpUtils {
     const headers = new Headers({
       "Content-Type": "application/json",
       "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex",
       "Cache-Control": "no-store",
       ...extraHeaders,
     });
@@ -52,6 +53,7 @@ class HttpUtils {
         "Content-Type": type,
         "Cache-Control": `public, max-age=${CONFIG.IMAGE_TTL_S}, immutable`,
         "X-Content-Type-Options": "nosniff",
+        "X-Robots-Tag": "noindex",
       },
     });
   }

@@ -754,7 +754,7 @@ class Timer {
     DOMUtils.setDigits(this.el.digits, text);
     const elapsed = Math.max(0, 1 - this.timeLeft / this.length(this.mode));
     if (this.el.progress) this.el.progress.style.width = `${(elapsed * 100).toFixed(2)}%`;
-    document.title = this.running ? `(${text}) ${this.baseTitle}` : this.baseTitle;
+    document.title = this.running ? `(${text}) 0bsidian` : this.baseTitle;
     if (this.el.viewTimer) {
       this.el.viewTimer.hidden = !this.running;
       this.el.viewTimer.textContent = this.running ? text : '';
