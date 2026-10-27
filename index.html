@@ -1,363 +1,299 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-scene="obsidian" data-tone="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Dr. Lokesh Tewari — Notes from a working physician</title>
-<meta name="description" content="Notes from a working physician. MBBS, junior resident, homelab tinkerer.">
+<title>0bsidian</title>
+<meta name="description" content="A pomodoro timer set on a new space picture every day. The picture resolves from grey to full colour as you focus. Tasks, focus sounds and streaks, no sign-up.">
 <link rel="canonical" href="https://lokeshtewari.uk">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://lokeshtewari.uk">
-<meta property="og:title" content="Dr. Lokesh Tewari — Notes from a working physician">
-<meta property="og:description" content="Notes from a working physician. MBBS, junior resident, homelab tinkerer.">
+<meta property="og:title" content="0bsidian">
+<meta property="og:description" content="A pomodoro timer set on a new space picture every day. The picture resolves into colour as you focus.">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Dr. Lokesh Tewari — Notes from a working physician">
-<meta name="twitter:description" content="Notes from a working physician. MBBS, junior resident, homelab tinkerer.">
+<meta name="twitter:title" content="0bsidian">
+<meta name="twitter:description" content="A pomodoro timer set on a new space picture every day. The picture resolves into colour as you focus.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="author" content="Dr. Lokesh Tewari">
-<meta name="theme-color" content="#0e0e0e">
+<meta name="theme-color" content="#0b0a0e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="0bsidian">
-<link rel="stylesheet" href="/styles.css?v=16">
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script src="/app.js?v=8" defer></script>
+<link rel="preload" href="/fonts/bodoni-moda.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css?v=17">
+<script src="/boot.js?v=1"></script>
+<script src="/app.js?v=9" defer></script>
 </head>
 <body>
-<div class="page">
-    <div class="topbar">
-      <div class="monogram">
-        <div class="study-companion" id="studyCompanion">
-          <div class="companion-art" id="companionArt"></div>
-          <div class="speech-bubble" id="companionSpeech"></div>
-        </div>
-      </div>
-      <div class="topbar-right">
-        <button class="topbar-install-btn pop-btn" id="installHint" hidden title="Install app"></button>
-        <a class="login-pill" id="loginPill" href="#" title="Private portal">login</a>
-      </div>
-    </div>
+  <!-- The picture is drawn twice: a soft grey print underneath and the sharp colour print on top.
+       During a focus session the colour print fades in as time passes. -->
+  <div class="backdrop" aria-hidden="true">
+    <canvas class="layer scene scene--soft" id="sceneSoft"></canvas>
+    <canvas class="layer scene scene--sharp" id="sceneSharp"></canvas>
+    <div class="layer wall wall--soft"></div>
+    <div class="layer wall wall--sharp"></div>
+    <div class="layer backdrop-shade"></div>
+  </div>
 
-    <div class="hero">
-      <div class="name-wrap">
-        <div class="claude-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 1 L13.8 10.2 L23 12 L13.8 13.8 L12 23 L10.2 13.8 L1 12 L10.2 10.2 Z"/>
-          </svg>
-        </div>
-        <h1 class="name">0bsidian AI</h1>
-        <button class="chat-scroll-btn" id="chatScrollBtn" title="Jump to chat">chat ↓</button>
-      </div>
-      <p class="subtitle" id="hero-subtitle"></p>
+  <div class="app" id="app">
 
-      <div class="dashboard-layout" id="dashboardLayout">
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="0bsidian, home">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2.9A8.37 8.37 0 0 1 12 17.4A8.37 8.37 0 0 1 12 2.9ZM20.66 17.9A8.37 8.37 0 0 1 8.1 10.65A8.37 8.37 0 0 1 20.66 17.9ZM3.34 17.9A8.37 8.37 0 0 1 15.9 10.65A8.37 8.37 0 0 1 3.34 17.9Z"/>
+        </svg>
+        <span class="brand-name">0bsidian</span>
+      </a>
+      <nav class="index" aria-label="Tools">
+        <button class="index-link" id="tasksBtn" aria-expanded="false" title="Tasks (T)">tasks</button>
+        <button class="index-link" id="soundsBtn" aria-expanded="false" title="Focus sounds">sounds</button>
+        <button class="index-link" id="statsBtn" aria-expanded="false" title="Today and history">today <span class="index-value" id="todayText">0m / 4h</span></button>
+        <button class="index-link" id="backgroundBtn" aria-expanded="false" title="Picture of the day">picture</button>
+        <button class="index-link" id="settingsBtn" aria-expanded="false" title="Timer settings">settings</button>
+        <span class="index-rule" aria-hidden="true"></span>
+        <button class="index-icon" id="popoutBtn" hidden title="Pop out a mini timer that stays on top (P)" aria-label="Pop out mini timer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="15" rx="1.5"/><rect x="12" y="11" width="7" height="5.5" rx="0.5"/></svg>
+        </button>
+        <button class="index-icon" id="zenBtn" title="Zen mode (F)" aria-label="Zen mode"></button>
+      </nav>
+    </header>
 
-        <!-- Main tab bar -->
-        <div class="dash-tab-bar">
-          <div class="dash-tabs">
-            <button class="dash-tab active" data-tab="study">study</button>
-            <button class="dash-tab" data-tab="terminal">chat</button>
-            <button class="dash-tab" data-tab="whats-new">What's New 🎉</button>
-          </div>
-          <div class="dash-bar-right">
-            <div class="studying-now" id="studyingNow" title="Active study sessions right now">
-              <span class="studying-dot"></span>
-              <span id="studyingCount">—</span> <span class="studying-label">studying now</span>
-            </div>
-            <button class="hub-fullscreen-btn pop-btn" id="hubFullscreenBtn" title="Toggle focus mode">
-              <span class="hub-fs-icon">⛶</span><span class="hub-fs-label">focus</span>
-            </button>
-          </div>
-        </div>
+    <main class="poster">
+      <figure class="quote">
+        <blockquote id="quoteText">Live in day-tight compartments.</blockquote>
+        <figcaption id="quoteBy">William Osler</figcaption>
+      </figure>
 
-        <!-- Study pane -->
-        <div class="dash-pane" id="dashStudyPane">
-          <div class="productivity-hub" id="prodHub">
-
-            <!-- Left column: pomodoro + session log -->
-            <div class="pomo-col">
-
-              <!-- Pomodoro Card -->
-              <div class="pomodoro-card timer-mode--focus" id="pomodoroCard">
-
-                <!-- Main row: left col (mode + controls) + right col (timer) -->
-                <div class="pomo-main-row">
-
-                  <!-- Left column: mode switch + controls + settings -->
-                  <div class="pomo-left-col">
-
-                    <!-- Mode switch: Focus | Pomodoro -->
-                    <div class="timer-mode-switch">
-                      <button class="timer-mode-btn active" data-timer-mode="focus">focus</button>
-                      <button class="timer-mode-btn" data-timer-mode="pomodoro">pomodoro</button>
-                    </div>
-
-                    <!-- Controls: play, reset, sound, settings -->
-                    <div class="pomo-controls-col">
-                      <button class="pomo-btn pop-btn" id="pomoToggle" title="Play / Pause"></button>
-                      <button class="pomo-btn pop-btn pomo-reset" id="pomoReset" title="Restart"></button>
-                      <button class="pomo-btn pop-btn pomo-sound-btn" id="pomoSound" title="Toggle sound"></button>
-                      <button class="pomo-btn pop-btn pomo-settings-btn" id="pomoSettingsBtn" title="Settings"></button>
-                    </div>
-
-                    <!-- Settings menu: opens to the right of left col -->
-                    <div class="pomo-settings-menu" id="pomoSettingsMenu">
-                      <div class="setting-section-label">time (minutes)</div>
-                      <div class="setting-slider-row">
-                        <span>focus</span>
-                        <div class="setting-slider-right">
-                          <input type="range" class="pomo-slider" id="settingWorkDur" min="1" max="90" value="25">
-                          <span class="slider-val" id="settingWorkDurVal">25</span>
-                        </div>
-                      </div>
-                      <div class="setting-slider-row">
-                        <span>rest</span>
-                        <div class="setting-slider-right">
-                          <input type="range" class="pomo-slider" id="settingShortBreak" min="1" max="30" value="5">
-                          <span class="slider-val" id="settingShortBreakVal">5</span>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div><!-- /pomo-left-col -->
-
-                  <!-- Timer column: subtabs + circle or focus display -->
-                  <div class="pomo-timer-col">
-
-                    <!-- Pomodoro sub-tabs (only visible in pomodoro mode) -->
-                    <div class="pomo-tabs pomo-subtabs" id="pomoSubtabs">
-                      <button class="pomo-tab pop-btn active" data-mode="pomodoro">focus</button>
-                      <button class="pomo-tab pop-btn" data-mode="shortBreak">rest</button>
-                    </div>
-
-                    <!-- Pomodoro countdown circle -->
-                    <div class="pomo-circle-wrap">
-                      <svg class="pomo-svg" viewBox="0 0 160 160">
-                        <circle class="pomo-bg" cx="80" cy="80" r="70"></circle>
-                        <circle class="pomo-progress" cx="80" cy="80" r="70" id="pomoProgress" stroke-dasharray="439.823" stroke-dashoffset="0"></circle>
-                      </svg>
-                      <div class="pomo-time" id="pomoTime">25:00</div>
-                      <div class="pomo-name-display" id="pomoNameDisplay">focus</div>
-                    </div>
-
-                    <!-- Focus mode count-up display -->
-                    <div class="pomo-focus-display" id="pomoFocusDisplay">
-                      <div class="focus-phase-label" id="focusPhaseLabel">focus</div>
-                      <div class="focus-time-display" id="focusTimeDisplay">0:00:00</div>
-                    </div>
-
-                  </div><!-- /pomo-timer-col -->
-
-                </div><!-- /pomo-main-row -->
-
-                <div class="pomo-footer">
-                  <div class="pomo-cycles-wrap" id="pomoCyclesWrap">
-                    <span class="pomo-cycle-label">cycle: <strong id="pomoCycle">1</strong></span>
-                    <span class="pomo-tomato cycle-1" data-cycle="1" title="cycle 1"></span>
-                    <span class="pomo-tomato cycle-2" data-cycle="2" title="cycle 2"></span>
-                    <span class="pomo-tomato cycle-3" data-cycle="3" title="cycle 3"></span>
-                    <span class="pomo-tomato cycle-4" data-cycle="4" title="cycle 4"></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Session Log (below pomodoro) -->
-              <div class="session-log-card">
-                <div class="session-log-header">
-                  <span class="session-log-title">sessions</span>
-                  <span class="session-log-count" id="sessionLogCount">0</span>
-                  <button class="session-log-clear pop-btn" id="sessionLogClear" title="Clear all session history">clear</button>
-                </div>
-                <div id="sessionLog" class="session-log-list"></div>
-              </div>
-
-            </div><!-- /pomo-col -->
-
-            <!-- Right column: todo card -->
-            <div class="todo-col">
-              <div class="todo-card" id="todoCard">
-                <div class="todo-header">tasks</div>
-                <div class="todo-input-wrap">
-                  <input type="color" id="todoColor" value="#e07878" title="Subject Color">
-                  <input type="text" id="todoInput" placeholder="add subject..." autocomplete="off">
-                  <button id="todoAdd" class="pop-btn">+</button>
-                </div>
-                <div class="todo-list-scroll" id="todoList"></div>
-              </div>
-            </div><!-- /todo-col -->
-
-          </div><!-- /productivity-hub -->
-        </div><!-- /dashStudyPane -->
-
-        <!-- Chat pane -->
-        <div class="dash-pane dash-pane--hidden" id="dashTerminalPane">
-          <div class="chat-pane" id="chatPane">
-            <div class="chat-main">
-              <div class="chat-messages" id="chatMessages"></div>
-              <div class="chat-turnstile-wrap" id="chatTurnstileWrap">
-                <div id="chatTurnstileWidget"></div>
-              </div>
-              <div class="chat-input-bar">
-                <input type="text" class="chat-input" id="chatInput"
-                       placeholder="type to chat…" autocomplete="off"
-                       autocapitalize="sentences" spellcheck="true"
-                       enterkeyhint="send" aria-label="Chat message" disabled>
-                <button class="chat-send-btn pop-btn" id="chatSendBtn" title="Send"></button>
-              </div>
-            </div>
-            <div class="chat-sidebar" id="chatSidebar">
-              <button class="chat-sidebar-new pop-btn" id="chatNewThread">+ new chat</button>
-              <div class="chat-sidebar-threads" id="chatThreadList"></div>
-              <button class="chat-sidebar-clear pop-btn" id="chatClearAll">clear all</button>
-            </div>
-          </div>
-        </div><!-- /dashTerminalPane -->
-
-        <!-- What's New pane -->
-        <div class="dash-pane dash-pane--hidden" id="dashWhatsNewPane">
-          <div class="whats-new-layout">
-            <div class="whats-new-pane">
-              <div class="whats-new-content" id="whatsNewContent">
-                <p class="whats-new-loading">loading…</p>
-              </div>
-            </div>
-          </div>
-        </div><!-- /dashWhatsNewPane -->
-
-      </div><!-- /dashboard-layout -->
-    </div><!-- /hero -->
-
-    <div class="tailscale-overlay overlay" id="tailscaleOverlay" aria-hidden="true" aria-modal="true" role="dialog">
-      <div class="contact-panel">
-        <p class="contact-title">private portal</p>
-        <p class="overlay-body-text">
-          Are you connected to Tailscale?<br>
-          This is a private server route.
+      <section class="timer" aria-label="Timer">
+        <p class="phase-line">
+          <span class="phase-name" id="phaseName">focus</span>
+          <span class="phase-sep" aria-hidden="true">/</span>
+          <span id="cycleText" title="Focus sessions until a long break">1 of 4</span>
+          <span class="phase-task-wrap"><span class="phase-sep" aria-hidden="true">/</span>
+          <button class="phase-task" id="phaseTask" title="Choose what you're working on (T)">pick a task</button></span>
+          <span class="breath" aria-hidden="true"><i></i><span class="breath-in">breathe in</span><span class="breath-out">breathe out</span></span>
         </p>
-        <div class="overlay-actions">
-          <button class="contact-submit" id="tsCancel">cancel</button>
-          <button class="contact-submit contact-submit-primary" id="tsConfirm">proceed →</button>
-        </div>
-      </div>
-    </div>
 
-    <div class="confirm-overlay" id="confirmOverlay">
-      <div class="confirm-panel">
-        <p class="confirm-msg" id="confirmMsg"></p>
-        <div class="confirm-actions">
-          <button class="confirm-btn confirm-cancel" id="confirmCancel">cancel</button>
-          <button class="confirm-btn confirm-yes" id="confirmYes">yes</button>
-        </div>
-      </div>
-    </div>
+        <div class="timer-digits" id="timerDigits" role="timer" aria-live="off">25:00</div>
 
-    <div class="break-tag-overlay overlay" id="breakTagOverlay" aria-hidden="true" aria-modal="true" role="dialog">
-      <div class="contact-panel break-tag-panel">
-        <p class="contact-title">what kind of break?</p>
-        <div class="break-duration-row">
-          <span id="breakDurationText">break</span>
-          <span class="break-info-icon" title="Duration of this break phase">⊘</span>
-        </div>
-        <div class="break-tag-grid" id="breakTagGrid"></div>
-        <div class="overlay-actions">
-          <button class="contact-submit" id="breakTagEdit">edit tags</button>
-          <button class="contact-submit" id="breakTagSkip">don't record</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="overlay" id="subjectSelectOverlay" aria-hidden="true" aria-modal="true" role="dialog">
-      <div class="contact-panel">
-        <p class="contact-title">what are you studying?</p>
-        <div class="subject-select-list" id="subjectSelectList"></div>
-        <div class="overlay-actions">
-          <button class="contact-submit" id="subjectSelectSkip">skip →</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="contact-overlay overlay" id="contactOverlay" aria-hidden="true" aria-modal="true" role="dialog">
-      <div class="contact-panel contact-panel-form">
-        <p class="contact-title">get in touch</p>
-        <form id="contactForm" class="contact-form" autocomplete="off">
-          <label class="contact-label">
-            <span>name</span>
-            <input type="text" id="contactName" maxlength="80" required>
-          </label>
-          <label class="contact-label">
-            <span>your email (optional)</span>
-            <input type="email" id="contactEmail" maxlength="120">
-          </label>
-          <label class="contact-label">
-            <span>subject</span>
-            <input type="text" id="contactSubject" maxlength="120" value="Hello from 0bsidian">
-          </label>
-          <label class="contact-label">
-            <span>message</span>
-            <textarea id="contactMessage" rows="5" maxlength="2000" required></textarea>
-          </label>
-          <p class="contact-note">
-            Opens your email app with the message pre-filled. No servers involved — your message never touches this site.
-            If your email app doesn't open, copy: <button type="button" id="copyEmailBtn" class="copy-email-btn">copy address</button>
-          </p>
-          <div class="overlay-actions">
-            <button type="button" class="contact-submit" id="contactCancel">cancel</button>
-            <button type="submit" class="contact-submit contact-submit-primary">send →</button>
+        <div class="controls">
+          <button class="start" id="startBtn" title="Start (Space)"><span class="start-icon" id="startIcon"></span><span id="startLabel">start</span></button>
+          <button class="ctl" id="resetBtn" title="Reset (R)">reset</button>
+          <button class="ctl" id="skipBtn" title="Skip to the next phase (S)">skip</button>
+          <span class="controls-rule" aria-hidden="true"></span>
+          <div class="modes" role="tablist" aria-label="Timer phase">
+            <button class="mode" role="tab" data-mode="pomodoro">focus<sup class="mode-count" id="countFocus">0</sup></button>
+            <button class="mode" role="tab" data-mode="shortBreak">short break<sup class="mode-count" id="countShort">0</sup></button>
+            <button class="mode" role="tab" data-mode="longBreak">long break<sup class="mode-count" id="countLong">0</sup></button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </section>
 
-    <div class="privacy-overlay overlay" id="privacyOverlay" aria-hidden="true" aria-modal="true" role="dialog">
-      <div class="contact-panel">
-        <p class="contact-title">privacy policy</p>
-        <div class="privacy-body">
-          <p><strong>0bsidian stores nothing about you on our servers.</strong> Tasks, timers, and chat history live only in your browser's <code>localStorage</code>.</p>
-          <p>Chat requests go to Cloudflare Workers AI over HTTPS. Ephemeral KV entries (rate-limit, heartbeat, Turnstile flag) expire automatically. No PII is retained.</p>
-          <p><strong>No advertising, no tracking.</strong> This site does not display ads and does not load any third-party advertising, analytics, or tracking scripts.</p>
-          <p>Source code is <a href="https://github.com/0bsidian-bit/landing-page" target="_blank" rel="noopener" style="color:var(--accent)">public on GitHub</a>.</p>
-          <p class="privacy-summary-line">your app data never leaves your browser · no ads · no tracking</p>
-        </div>
-        <div class="overlay-actions">
-          <button class="contact-submit contact-submit-primary" id="privacyClose">close</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="privacy-overlay overlay" id="devMsgOverlay" aria-hidden="true" aria-modal="true" role="dialog">
-      <div class="contact-panel">
-        <p class="contact-title">message from developer</p>
-        <div class="privacy-body" id="devMsgBody">
-          <p style="color: var(--term-dimmer); font-style: italic;">loading…</p>
-        </div>
-        <div class="overlay-actions">
-          <button class="contact-submit contact-submit-primary" id="devMsgClose">close</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="overlay" id="devContactOverlay" aria-hidden="true" aria-modal="true" role="dialog">
-      <div class="contact-panel">
-        <p class="contact-title">Dr. Lokesh Tewari</p>
-        <p style="font-family:var(--font-mono);font-size:12px;color:var(--term-dim);margin-bottom:18px">
-          working physician · homelab tinkerer · maker of 0bsidian
+      <aside class="caption" id="caption">
+        <p class="caption-title" id="captionTitle">Obsidian</p>
+        <p class="caption-text" id="captionText">Built-in scene, painted in your browser.</p>
+        <p class="caption-links">
+          <a href="#" id="captionLink" target="_blank" rel="noopener" hidden>about this picture</a>
+          <a href="#" id="aboutLink">about 0bsidian</a>
         </p>
-        <div class="overlay-actions">
-          <button class="contact-submit" id="devContactGetInTouch">get in touch →</button>
-          <button class="contact-submit contact-submit-primary" id="devContactGithub">GitHub →</button>
-        </div>
-      </div>
-    </div>
+      </aside>
+    </main>
 
-    <div class="footer">
-      <a href="#" id="footerDevName" class="footer-link">Dr. Lokesh Tewari</a>
-      <span>·</span>
-      <a href="#" id="footerPrivacyLink" class="footer-link">privacy policy</a>
+    <div class="progress" aria-hidden="true"><span class="progress-fill" id="progressFill"></span></div>
+  </div>
+
+  <div class="toast-zone" id="toastZone" role="status" aria-live="polite"></div>
+
+  <!-- Sheets -->
+  <aside class="sheet" id="tasksSheet" aria-label="Tasks">
+    <header class="sheet-head">
+      <h2 class="sheet-title">Tasks</h2>
+      <button class="sheet-close" data-close aria-label="Close tasks">close</button>
+    </header>
+    <form class="task-add" id="taskForm" autocomplete="off">
+      <input type="text" id="taskInput" maxlength="120" placeholder="What are you working on?" aria-label="New task">
+      <div class="stepper" title="Pomodoros this will take">
+        <button type="button" class="stepper-btn" id="taskEstDown" aria-label="Fewer pomodoros">−</button>
+        <span class="stepper-val" id="taskEst" aria-live="polite">1</span>
+        <button type="button" class="stepper-btn" id="taskEstUp" aria-label="More pomodoros">+</button>
+      </div>
+      <button type="submit" class="btn btn--primary">add</button>
+    </form>
+    <ol class="task-list" id="taskList"></ol>
+    <footer class="sheet-foot">
+      <p class="task-summary" id="taskSummary"></p>
+      <button class="text-btn" id="clearFinishedBtn">clear finished</button>
+    </footer>
+  </aside>
+
+  <aside class="sheet" id="soundsSheet" aria-label="Focus sounds">
+    <header class="sheet-head">
+      <h2 class="sheet-title">Sounds</h2>
+      <button class="sheet-close" data-close aria-label="Close sounds">close</button>
+    </header>
+    <ul class="sound-list" id="soundList"></ul>
+    <div class="field-row">
+      <label for="soundVolume">volume</label>
+      <input type="range" class="slider" id="soundVolume" min="0" max="100" value="50">
+      <span class="field-val"><span id="soundVolumeVal">50</span>%</span>
+    </div>
+    <label class="toggle-row" for="soundFocusOnly"><span>only while a focus session runs</span><input type="checkbox" id="soundFocusOnly" class="switch"></label>
+    <p class="hint">Every sound is made live in your browser from noise, so nothing downloads.</p>
+  </aside>
+
+  <aside class="sheet" id="todaySheet" aria-label="Today and history">
+    <header class="sheet-head">
+      <h2 class="sheet-title">Today</h2>
+      <button class="sheet-close" data-close aria-label="Close today">close</button>
+    </header>
+    <dl class="figures">
+      <div class="figure"><dt>focused</dt><dd id="statFocus">0m</dd></div>
+      <div class="figure"><dt>sessions</dt><dd id="statSessions">0</dd></div>
+      <div class="figure"><dt>day streak</dt><dd id="statStreak">0</dd></div>
+    </dl>
+    <div class="goal">
+      <div class="goal-head"><span>daily goal</span><span id="goalText">0m of 4h</span></div>
+      <div class="goal-bar"><span class="goal-fill" id="goalFill"></span></div>
+    </div>
+    <div class="day-strip-wrap">
+      <div class="day-strip" id="dayStrip" aria-label="Today's sessions on a 24-hour line"></div>
+      <div class="day-axis" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+    </div>
+    <div class="section-head">
+      <h3 class="label">history</h3>
+      <span class="label-count" id="historyCount">0</span>
+      <button class="text-btn" id="historyClearBtn">clear all</button>
+    </div>
+    <ul class="history-list" id="historyList"></ul>
+  </aside>
+
+  <aside class="sheet" id="photoSheet" aria-label="Picture of the day">
+    <header class="sheet-head">
+      <h2 class="sheet-title">Picture</h2>
+      <button class="sheet-close" data-close aria-label="Close picture">close</button>
+    </header>
+    <div class="sheet-scroll">
+      <section class="group">
+        <fieldset class="source-list" id="wallSource">
+          <legend class="label">picture of the day</legend>
+          <label class="source-option"><input type="radio" name="wallSource" value="apod"><span class="source-name">Space</span><span class="source-note">NASA's astronomy picture of the day</span></label>
+          <label class="source-option"><input type="radio" name="wallSource" value="bing"><span class="source-name">Earth</span><span class="source-note">Bing's photo of the day</span></label>
+          <label class="source-option"><input type="radio" name="wallSource" value="scene"><span class="source-name">Painted</span><span class="source-note">a built-in scene, no photo</span></label>
+        </fieldset>
+        <label class="toggle-row" for="wallDark"><span>prefer dark pictures</span><input type="checkbox" id="wallDark" class="switch"></label>
+        <label class="toggle-row" for="wallDevelop"><span>resolve the picture as you focus</span><input type="checkbox" id="wallDevelop" class="switch"></label>
+        <div class="field-row">
+          <label for="wallDim">dim</label>
+          <input type="range" class="slider" id="wallDim" min="0" max="70" step="5" value="20">
+          <span class="field-val"><span id="wallDimVal">20</span>%</span>
+        </div>
+        <p class="hint" id="wallStatus">A new picture every day. The page takes its colours, and light or dark text, from it. With "prefer dark" on, a bright day falls back to the newest dark picture from the past few weeks. Space pictures are NASA's public-domain images only.</p>
+        <div class="thumb-grid" id="wallGrid"></div>
+      </section>
+      <section class="group">
+        <h3 class="label">built-in scenes</h3>
+        <p class="hint">Shown when the picture of the day is off or can't load. Picking one switches to painted.</p>
+        <div class="thumb-grid" id="sceneGrid"></div>
+      </section>
+    </div>
+  </aside>
+
+  <aside class="sheet" id="settingsSheet" aria-label="Timer settings">
+    <header class="sheet-head">
+      <h2 class="sheet-title">Settings</h2>
+      <button class="sheet-close" data-close aria-label="Close settings">close</button>
+    </header>
+    <div class="sheet-scroll">
+      <section class="group">
+        <h3 class="label">lengths</h3>
+        <div class="field-row">
+          <label for="setFocus">focus</label>
+          <input type="range" class="slider" id="setFocus" data-setting="focus" min="5" max="120" step="5" value="25">
+          <span class="field-val"><span data-value="focus">25</span>m</span>
+        </div>
+        <div class="field-row">
+          <label for="setShort">short break</label>
+          <input type="range" class="slider" id="setShort" data-setting="shortBreak" min="1" max="30" value="5">
+          <span class="field-val"><span data-value="shortBreak">5</span>m</span>
+        </div>
+        <div class="field-row">
+          <label for="setLong">long break</label>
+          <input type="range" class="slider" id="setLong" data-setting="longBreak" min="5" max="60" step="5" value="15">
+          <span class="field-val"><span data-value="longBreak">15</span>m</span>
+        </div>
+        <div class="field-row">
+          <label for="setLongEvery">long break after</label>
+          <input type="range" class="slider" id="setLongEvery" data-setting="longEvery" min="2" max="8" value="4">
+          <span class="field-val"><span data-value="longEvery">4</span> sessions</span>
+        </div>
+      </section>
+
+      <section class="group">
+        <h3 class="label">flow</h3>
+        <label class="toggle-row" for="setAutoBreak"><span>start breaks automatically</span><input type="checkbox" id="setAutoBreak" data-setting="autoBreak" class="switch"></label>
+        <label class="toggle-row" for="setAutoFocus"><span>start the next focus session automatically</span><input type="checkbox" id="setAutoFocus" data-setting="autoFocus" class="switch"></label>
+        <div class="field-row">
+          <label for="setGoal">daily goal</label>
+          <input type="range" class="slider" id="setGoal" data-setting="goal" min="30" max="720" step="30" value="240">
+          <span class="field-val" data-value="goal">4h</span>
+        </div>
+      </section>
+
+      <section class="group">
+        <h3 class="label">alerts</h3>
+        <label class="toggle-row" for="setBell"><span>bell when a timer ends</span><input type="checkbox" id="setBell" data-setting="bell" class="switch"></label>
+        <label class="toggle-row" for="setTick"><span>ticking during focus</span><input type="checkbox" id="setTick" data-setting="tick" class="switch"></label>
+        <label class="toggle-row" for="setNotify"><span>notify me when a timer ends</span><input type="checkbox" id="setNotify" class="switch"></label>
+        <p class="hint" id="notifyHint">Shows a system notification when this tab is in the background. The tab's icon also turns into a progress ring while a timer runs.</p>
+      </section>
+
+      <section class="group">
+        <h3 class="label">keyboard</h3>
+        <dl class="shortcuts">
+          <div><dt><kbd>Space</kbd></dt><dd>start or pause</dd></div>
+          <div><dt><kbd>R</kbd></dt><dd>reset</dd></div>
+          <div><dt><kbd>S</kbd></dt><dd>skip to the next phase</dd></div>
+          <div><dt><kbd>T</kbd></dt><dd>tasks</dd></div>
+          <div><dt><kbd>F</kbd></dt><dd>zen mode</dd></div>
+          <div><dt><kbd>P</kbd></dt><dd>pop-out mini timer</dd></div>
+        </dl>
+      </section>
+    </div>
+  </aside>
+
+  <!-- Modals -->
+  <div class="overlay" id="confirmOverlay" aria-hidden="true" aria-modal="true" role="alertdialog" aria-labelledby="confirmMsg">
+    <div class="panel panel--narrow">
+      <p class="panel-text" id="confirmMsg"></p>
+      <div class="panel-actions">
+        <button class="btn" id="confirmCancel">cancel</button>
+        <button class="btn btn--primary" id="confirmYes">yes</button>
+      </div>
     </div>
   </div>
 
-  <button class="install-hint pop-btn" id="installHint" hidden>install app</button>
+  <div class="overlay" id="aboutOverlay" aria-hidden="true" aria-modal="true" role="dialog" aria-labelledby="aboutTitle">
+    <div class="panel">
+      <h2 class="panel-title" id="aboutTitle">0bsidian</h2>
+      <div class="prose">
+        <p>A pomodoro timer set on a new picture every day, from NASA's astronomy archive or Bing. When a focus session starts the picture stays unobserved, grey and out of focus, and it resolves into colour as you work. Finish the session and you see all of it.</p>
+        <h3>privacy</h3>
+        <p>Tasks, settings and history are saved in this browser and nowhere else. There's no sign-up, analytics, ads or cookies. Pictures are fetched by this site's server and passed on to you, so your browser never connects to NASA or Microsoft.</p>
+        <h3>made by</h3>
+        <p>Dr. Lokesh Tewari. The code is <a href="https://github.com/0bsidian-bit/landing-page" target="_blank" rel="noopener">on GitHub</a>.</p>
+      </div>
+      <div class="email-row">
+        <span class="label">email</span>
+        <a class="email-address" id="emailAddress" href="mailto:social@lokeshtewari.uk">social@lokeshtewari.uk</a>
+        <button class="text-btn text-btn--accent" id="copyEmailBtn">copy</button>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn--primary" data-close>close</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

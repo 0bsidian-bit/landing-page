@@ -1,28 +1,91 @@
 /**
- * 0bsidian Terminal Application
+ * 0bsidian — a pomodoro timer set on the picture of the day.
+ * During a focus session the picture stays grey and soft (unobserved) and resolves
+ * into colour as time passes; finishing the session reveals all of it.
  */
 
-const CONFIG = {
-  aiHistoryKey: 'lt-ai-history',
-  chatThreadsKey: 'lt-chat-threads',
-  subtitleText: 'notes from a working physician',
-  typingSpeedMs: 55,
-  typingDelayMs: 2500,
-  botName: '0bsidian',
-  contactEmail: 'tarball.lipid_7i@icloud.com',
-  portalUrl: 'https://start.lokeshtewari.uk'
+const ICONS = {
+  play: `<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="5,2 21,12 5,22"/></svg>`,
+  pause: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="6" height="20"/><rect x="14" y="2" width="6" height="20"/></svg>`,
+  expand: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>`,
+  collapse: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"/></svg>`
 };
 
-const ICONS = {
-  play: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`,
-  pause: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
-  reset: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>`,
-  settings: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-  soundOn: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`,
-  soundOff: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`,
-  send: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
-  install: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`
+// On time, observation and not knowing; a new one each time a session starts
+const QUOTES = [
+  ['The distinction between past, present and future is only a stubbornly persistent illusion.', 'Albert Einstein'],
+  ['The beginning is the end, and the end is the beginning.', 'Dark'],
+  ['What we know is a drop. What we don’t know is an ocean.', 'Dark, after Isaac Newton'],
+  ['The question isn’t where, but when.', 'Dark'],
+  ['I think I can safely say that nobody understands quantum mechanics.', 'Richard Feynman'],
+  ['What we observe is not nature itself, but nature exposed to our method of questioning.', 'Werner Heisenberg'],
+  ['The eternal mystery of the world is its comprehensibility.', 'Albert Einstein'],
+  ['Time is what keeps everything from happening at once.', 'Ray Cummings'],
+  ['Everything is connected.', 'Dark'],
+  ['Imagination is more important than knowledge.', 'Albert Einstein'],
+  ['Nothing in life is to be feared, it is only to be understood.', 'Marie Curie'],
+  ['Look up at the stars and not down at your feet.', 'Stephen Hawking']
+];
+
+const SETTINGS_KEY = '0bsidian_settings_v2';
+const TIMER_KEY = '0bsidian_timer_v2';
+const HISTORY_KEY = '0bsidian_history_v2';
+const TASKS_KEY = '0bsidian_tasks_v3';
+const SOUND_KEY = '0bsidian_sound_v1';
+const SCENE_KEY = '0bsidian_scene';
+const WALL_KEY = '0bsidian_wallpaper_v1';
+const WALL_STATS_KEY = '0bsidian_wall_stats_v1';
+const LOOK_KEY = '0bsidian_look_v1'; // last picture's look, applied by boot.js before first paint
+// Data from the previous version of the site
+const LEGACY_KEYS = [
+  'lt-ai-history', 'lt-chat-threads', '0bsidian_pet_id', '0bsidian_pomo_state_v1', '0bsidian_pomo_stats',
+  '0bsidian_pomo_names_v1', '0bsidian_pomo_settings_v1', '0bsidian_pomo_log_v1', '0bsidian_sound_enabled',
+  '0bsidian_timer_mode', '0bsidian_break_tags_v1', '0bsidian_todos_v2'
+];
+
+const DARK_PHOTO_LUM = 0.09; // mean relative luminance below this counts as a dark picture
+const LIGHT_UI_LUM = 0.28;   // above this, after dimming, the page switches to dark text
+const DEVELOP_FADE_MS = 2100; // matches the opacity transition on the sharp print
+
+const DEFAULT_SETTINGS = {
+  focus: 25,
+  shortBreak: 5,
+  longBreak: 15,
+  longEvery: 4,
+  autoBreak: false,
+  autoFocus: false,
+  goal: 240,
+  bell: true,
+  tick: false,
+  notify: false
 };
+
+const MODES = {
+  pomodoro:   { label: 'focus',       setting: 'focus' },
+  shortBreak: { label: 'short break', setting: 'shortBreak' },
+  longBreak:  { label: 'long break',  setting: 'longBreak' }
+};
+
+const Store = {
+  get(key, fallback) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key));
+      return value ?? fallback;
+    } catch {
+      return fallback;
+    }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  },
+  remove(key) {
+    try { localStorage.removeItem(key); } catch {}
+  }
+};
+
+function loadSettings() {
+  return { ...DEFAULT_SETTINGS, ...Store.get(SETTINGS_KEY, {}) };
+}
 
 function siteConfirm(message) {
   return new Promise(resolve => {
@@ -33,1213 +96,923 @@ function siteConfirm(message) {
     if (!overlay || !msg) { resolve(confirm(message)); return; }
 
     msg.textContent = message;
+    overlay.inert = false;
     overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    setTimeout(() => yesBtn.focus(), 50);
 
     const cleanup = (result) => {
       overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.inert = true;
       yesBtn.removeEventListener('click', onYes);
       cancelBtn.removeEventListener('click', onCancel);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keydown', onKey, true);
       resolve(result);
     };
 
     const onYes = () => cleanup(true);
     const onCancel = () => cleanup(false);
     const onKey = (e) => {
-      if (e.key === 'Escape') cleanup(false);
-      if (e.key === 'Enter') cleanup(true);
+      if (e.key === 'Escape') { e.stopPropagation(); cleanup(false); }
+      if (e.key === 'Enter') { e.preventDefault(); cleanup(true); }
     };
 
     yesBtn.addEventListener('click', onYes);
     cancelBtn.addEventListener('click', onCancel);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, true);
   });
 }
 
 class DOMUtils {
-  static parseMarkdown(text) {
-    const frag = document.createDocumentFragment();
-    const re = /\*\*(.+?)\*\*|\*(.+?)\*/g;
-    let last = 0, m;
-
-    while ((m = re.exec(text)) !== null) {
-      if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
-      if (m[1] !== undefined) {
-        const strong = document.createElement('strong');
-        strong.textContent = m[1];
-        frag.appendChild(strong);
-      } else {
-        const em = document.createElement('em');
-        em.textContent = m[2];
-        frag.appendChild(em);
+  // Renders "25:00" with the colon in its own span
+  static setDigits(el, text) {
+    if (!el) return;
+    const doc = el.ownerDocument;
+    const nodes = [];
+    text.split(':').forEach((part, i) => {
+      if (i) {
+        const colon = doc.createElement('span');
+        colon.className = 'colon';
+        colon.textContent = ':';
+        nodes.push(colon);
       }
-      last = m.index + m[0].length;
+      nodes.push(doc.createTextNode(part));
+    });
+    el.replaceChildren(...nodes);
+    el.classList.toggle('is-long', text.length > 5);
+  }
+
+  static fmtMinutes(mins) {
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  static fmtClockTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+}
+
+class Quotes {
+  static index = Math.floor(Math.random() * QUOTES.length);
+
+  static show() {
+    const [text, by] = QUOTES[this.index];
+    const textEl = document.getElementById('quoteText');
+    const byEl = document.getElementById('quoteBy');
+    if (textEl) textEl.textContent = text;
+    if (byEl) byEl.textContent = by;
+  }
+
+  static next() {
+    this.index = (this.index + 1) % QUOTES.length;
+    this.show();
+  }
+}
+
+// ── Audio ────────────────────────────────────────────────────────────────────
+
+// One AudioContext for the bell and the focus sounds. Browsers only let it start
+// after the visitor has interacted with the page.
+const AudioHub = {
+  ctx: null,
+  get() {
+    if (!this.ctx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      this.ctx = new Ctx();
     }
-    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
-    return frag;
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    return this.ctx;
   }
-}
-
-class ChatClient {
-  constructor() {
-    this.isLoading = false;
-    this.threads = [];
-    this.activeThreadId = null;
-    this._loadThreads();
-    if (this.threads.length === 0) this._createThread();
-  }
-
-  _loadThreads() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(CHAT_THREADS_KEY));
-      if (Array.isArray(saved) && saved.length > 0) {
-        this.threads = saved;
-        this.activeThreadId = this.threads[0].id;
-        return;
-      }
-    } catch {}
-    // Migrate legacy flat history
-    try {
-      const legacy = JSON.parse(localStorage.getItem(CONFIG.aiHistoryKey));
-      if (Array.isArray(legacy) && legacy.length > 0) {
-        const thread = { id: Date.now(), title: 'previous chat', createdAt: Date.now(), messages: legacy };
-        this.threads = [thread];
-        this.activeThreadId = thread.id;
-        this._saveThreads();
-      }
-    } catch {}
-  }
-
-  _saveThreads() {
-    try { localStorage.setItem(CHAT_THREADS_KEY, JSON.stringify(this.threads)); } catch {}
-  }
-
-  _createThread() {
-    const thread = { id: Date.now(), title: 'new chat', createdAt: Date.now(), messages: [] };
-    this.threads.unshift(thread);
-    if (this.threads.length > 10) this.threads.splice(10);
-    this.activeThreadId = thread.id;
-    this._saveThreads();
-    return thread;
-  }
-
-  get activeThread() {
-    return this.threads.find(t => t.id === this.activeThreadId) || this.threads[0];
-  }
-
-  get conversation() { return this.activeThread?.messages || []; }
-
-  newThread() { this._createThread(); }
-
-  switchThread(id) {
-    const t = this.threads.find(t => t.id === id);
-    if (t) this.activeThreadId = t.id;
-  }
-
-  clearAll() {
-    this.threads = [];
-    try { localStorage.removeItem(CHAT_THREADS_KEY); } catch {}
-    this._createThread();
-  }
-
-  clearMemory() {
-    const t = this.activeThread;
-    if (t) { t.messages = []; this._saveThreads(); }
-  }
-
-  pushUserMessage(content) {
-    const t = this.activeThread;
-    if (!t) return;
-    if (t.messages.length === 0) {
-      t.title = content.slice(0, 28) + (content.length > 28 ? '…' : '');
-    }
-    t.messages.push({ role: 'user', content });
-  }
-
-  pushAssistantMessage(content) {
-    const t = this.activeThread;
-    if (!t) return;
-    t.messages.push({ role: 'assistant', content });
-    this._saveThreads();
-  }
-
-  popLastMessage() { this.activeThread?.messages.pop(); }
-  getTurns() { return Math.floor((this.activeThread?.messages?.length || 0) / 2); }
-
-  async ask() {
-    this.isLoading = true;
-    try {
-      const token = window.appInstance?.turnstileToken;
-      const messages = this.conversation.slice(-20);
-      const res = await fetch('/api/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, turnstileToken: token })
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Server error');
-      }
-      const data = await res.json();
-      if (!data.response) throw new Error('Empty response');
-      return data.response;
-    } finally {
-      this.isLoading = false;
-    }
-  }
-}
-
-class ChatUI {
-  constructor() {
-    this.messagesEl = document.getElementById('chatMessages');
-    this.input = document.getElementById('chatInput');
-    this.sendBtn = document.getElementById('chatSendBtn');
-    this.typingIndicator = null;
-    this.isLocked = true; // locked until Turnstile verified
-    this.initEvents();
-    if (this.sendBtn) this.sendBtn.innerHTML = ICONS.send;
-  }
-
-  setAppInstance(app) {
-    this.app = app;
-    document.getElementById('chatNewThread')?.addEventListener('click', () => {
-      this.app.chatClient.newThread();
-      this.clearMessages();
-      this.renderSidebar();
-    });
-    document.getElementById('chatClearAll')?.addEventListener('click', async () => {
-      const ok = await siteConfirm('clear all chat history?');
-      if (!ok) return;
-      this.app.chatClient.clearAll();
-      this.clearMessages();
-      this.renderSidebar();
-    });
-  }
-
-  initEvents() {
-    this.sendBtn?.addEventListener('click', () => this.submitInput());
-    this.input?.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.submitInput(); }
-    });
-  }
-
-  renderSidebar() {
-    const list = document.getElementById('chatThreadList');
-    if (!list || !this.app) return;
-    list.replaceChildren();
-    this.app.chatClient.threads.forEach(thread => {
-      const btn = document.createElement('button');
-      btn.className = 'chat-thread-item';
-      if (thread.id === this.app.chatClient.activeThreadId) btn.classList.add('active');
-      btn.textContent = thread.title || 'untitled';
-      btn.title = thread.title;
-      btn.addEventListener('click', () => {
-        this.app.chatClient.switchThread(thread.id);
-        this.clearMessages();
-        this._replayThread(this.app.chatClient.activeThread);
-        this.renderSidebar();
-      });
-      list.appendChild(btn);
-    });
-  }
-
-  _replayThread(thread) {
-    if (!thread?.messages) return;
-    thread.messages.forEach(msg => {
-      if (msg.role === 'user') this.appendUserMessage(msg.content);
-      else if (msg.role === 'assistant') this.appendAIMessage(msg.content);
-    });
-  }
-
-  submitInput() {
-    if (this.isLocked) return;
-    const val = this.input?.value.trim();
-    if (!val) return;
-    if (this.input) this.input.value = '';
-    this.app.handleAIQuery(val);
-  }
-
-  appendUserMessage(text) {
-    const msg = document.createElement('div');
-    msg.className = 'chat-msg chat-msg--user';
-    msg.textContent = text;
-    this.messagesEl?.appendChild(msg);
-    this.scrollDown();
-  }
-
-  appendAIMessage(text) {
-    const msg = document.createElement('div');
-    msg.className = 'chat-msg chat-msg--ai';
-    msg.appendChild(DOMUtils.parseMarkdown(text));
-    this.messagesEl?.appendChild(msg);
-    this.scrollDown();
-    this.renderSidebar();
-  }
-
-  appendSystemMessage(text) {
-    const msg = document.createElement('div');
-    msg.className = 'chat-msg chat-msg--system';
-    msg.textContent = text;
-    this.messagesEl?.appendChild(msg);
-    this.scrollDown();
-  }
-
-  showTypingIndicator() {
-    const ind = document.createElement('div');
-    ind.className = 'chat-msg chat-msg--ai chat-typing';
-    ind.innerHTML = '<span></span><span></span><span></span>';
-    this.messagesEl?.appendChild(ind);
-    this.typingIndicator = ind;
-    this.scrollDown();
-    return { remove: () => ind.remove() };
-  }
-
-  scrollDown() {
-    if (this.messagesEl) this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
-  }
-
-  lockInput() {
-    this.isLocked = true;
-    if (this.input) { this.input.disabled = true; this.input.placeholder = 'verify to chat…'; }
-  }
-
-  unlockInput() {
-    this.isLocked = false;
-    if (this.input) { this.input.disabled = false; this.input.placeholder = 'type to chat…'; this.input.focus(); }
-  }
-
-  clearMessages() {
-    if (this.messagesEl) this.messagesEl.replaceChildren();
-  }
-}
-
-class PomoAudio {
-  constructor() { this.ctx = null; }
-  init() {
-    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-  }
-  playTick() {
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-    // High transient click
-    const osc1 = this.ctx.createOscillator();
-    const gain1 = this.ctx.createGain();
-    osc1.type = 'square';
-    osc1.frequency.setValueAtTime(1200, t);
-    osc1.frequency.exponentialRampToValueAtTime(400, t + 0.012);
-    gain1.gain.setValueAtTime(0.12, t);
-    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.018);
-    osc1.connect(gain1); gain1.connect(this.ctx.destination);
-    osc1.start(t); osc1.stop(t + 0.018);
-    // Low thud body
-    const osc2 = this.ctx.createOscillator();
-    const gain2 = this.ctx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(180, t);
-    osc2.frequency.exponentialRampToValueAtTime(80, t + 0.04);
-    gain2.gain.setValueAtTime(0.06, t);
-    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-    osc2.connect(gain2); gain2.connect(this.ctx.destination);
-    osc2.start(t); osc2.stop(t + 0.04);
-  }
-  playBell() {
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 2);
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2);
-    osc.connect(gain); gain.connect(this.ctx.destination);
-    osc.start(); osc.stop(this.ctx.currentTime + 2);
-  }
-
-  playAmbient() {
-    if (!this.ctx) return;
-    [200, 250, 310].forEach(freq => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-      gain.gain.setValueAtTime(0.035, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 3);
-      osc.connect(gain); gain.connect(this.ctx.destination);
-      osc.start(); osc.stop(this.ctx.currentTime + 3);
-    });
-  }
-}
-
-const POMO_STATE_KEY = '0bsidian_pomo_state_v1';
-const POMO_STATS_KEY = '0bsidian_pomo_stats';
-const POMO_NAMES_KEY = '0bsidian_pomo_names_v1';
-const POMO_SETTINGS_KEY = '0bsidian_pomo_settings_v1';
-const POMO_LOG_KEY = '0bsidian_pomo_log_v1';
-const POMO_CIRCUMFERENCE = 439.823;
-const POMO_SOUND_KEY = '0bsidian_sound_enabled';
-const POMO_TIMER_MODE_KEY = '0bsidian_timer_mode';
-const BREAK_TAGS_KEY = '0bsidian_break_tags_v1';
-const CHAT_THREADS_KEY = 'lt-chat-threads';
-const POMO_DEFAULT_SETTINGS = {
-  workDuration: 25,
-  shortBreakDuration: 5,
-  tickingSound: false,
-  bell: true,
 };
 
-class PomodoroTimer {
-  constructor() {
-    this.settings = { ...POMO_DEFAULT_SETTINGS };
-    try {
-      const saved = JSON.parse(localStorage.getItem(POMO_SETTINGS_KEY));
-      if (saved && typeof saved === 'object') this.settings = { ...this.settings, ...saved };
-    } catch {}
+const Chime = {
+  // A soft three-note arpeggio
+  bell() {
+    const ctx = AudioHub.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    [[659.25, 0], [987.77, 0.18], [1318.51, 0.36]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t + delay);
+      gain.gain.exponentialRampToValueAtTime(0.22, t + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + delay + 2.2);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t + delay);
+      osc.stop(t + delay + 2.3);
+    });
+  },
 
-    this.modes = {
-      pomodoro: this.settings.workDuration * 60,
-      shortBreak: this.settings.shortBreakDuration * 60,
-    };
-    this.currentMode = 'pomodoro';
-    this.timeLeft = this.modes.pomodoro;
-    this.isRunning = false;
-    this.timerId = null;
-    this.endsAt = null;
-    this.baseTitle = document.title;
+  tick() {
+    const ctx = AudioHub.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, t);
+    osc.frequency.exponentialRampToValueAtTime(400, t + 0.012);
+    gain.gain.setValueAtTime(0.05, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.02);
+  }
+};
 
-    let stats = { cycles: 0 };
-    try { stats = JSON.parse(localStorage.getItem(POMO_STATS_KEY)) || stats; } catch {}
-    this.totalCycles = stats.cycles;
+const SOUNDS = {
+  off:   { label: 'Silence',     note: 'nothing but the bell' },
+  rain:  { label: 'Rain',        note: 'steady, soft' },
+  waves: { label: 'Waves',       note: 'a slow swell' },
+  fan:   { label: 'Fan',         note: 'a low hum' },
+  brown: { label: 'Brown noise', note: 'deep' },
+  pink:  { label: 'Pink noise',  note: 'even' }
+};
 
-    this.names = { pomodoro: 'focus', shortBreak: 'rest' };
-    try {
-      const saved = JSON.parse(localStorage.getItem(POMO_NAMES_KEY));
-      if (saved && typeof saved === 'object') this.names = { ...this.names, ...saved };
-    } catch {}
+// Focus sounds, synthesised from noise so there is nothing to download
+class Ambience {
+  constructor(app) {
+    this.app = app;
+    const saved = Store.get(SOUND_KEY, {});
+    this.type = SOUNDS[saved.type] ? saved.type : 'off';
+    this.volume = Number.isFinite(saved.volume) ? saved.volume : 50;
+    this.focusOnly = !!saved.focusOnly;
+    this.buffers = {};
+    this.graph = null;
+    this.previewTimer = null;
 
-    // Sound master toggle
-    this.soundEnabled = true;
-    try { const s = localStorage.getItem(POMO_SOUND_KEY); if (s !== null) this.soundEnabled = s !== 'false'; } catch {}
+    this.list = document.getElementById('soundList');
+    this.volumeEl = document.getElementById('soundVolume');
+    this.volumeVal = document.getElementById('soundVolumeVal');
+    this.focusOnlyEl = document.getElementById('soundFocusOnly');
+    this.navBtn = document.getElementById('soundsBtn');
 
-    // Timer mode: 'focus' (count-up) or 'pomodoro' (countdown)
-    this.timerMode = 'focus';
-    try { const m = localStorage.getItem(POMO_TIMER_MODE_KEY); if (m === 'pomodoro' || m === 'focus') this.timerMode = m; } catch {}
+    Object.entries(SOUNDS).forEach(([id, sound]) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'sound-option';
+      btn.dataset.sound = id;
+      const name = document.createElement('span');
+      name.className = 'sound-name';
+      name.textContent = sound.label;
+      const note = document.createElement('span');
+      note.className = 'sound-note';
+      note.textContent = sound.note;
+      btn.append(name, note);
+      btn.addEventListener('click', () => this.select(id));
+      li.appendChild(btn);
+      this.list?.appendChild(li);
+    });
 
-    // Focus mode state
-    this.focusElapsed = 0;
-    this.breakElapsed = 0;
-    this.focusPhase = 'idle'; // 'idle' | 'working' | 'breaking'
-    this.focusTimerId = null;
-    this._currentSessionName = null;
-    this.todo = null; // wired up by TerminalApp after construction
-
-    this.audio = new PomoAudio();
-
-    this.elements = {
-      tabs: document.querySelectorAll('.pomo-tab'),
-      subtabs: document.getElementById('pomoSubtabs'),
-      time: document.getElementById('pomoTime'),
-      progress: document.getElementById('pomoProgress'),
-      nameDisplay: document.getElementById('pomoNameDisplay'),
-      toggleBtn: document.getElementById('pomoToggle'),
-      resetBtn: document.getElementById('pomoReset'),
-      soundBtn: document.getElementById('pomoSound'),
-      cycleInfo: document.getElementById('pomoCycle'),
-      cyclesWrap: document.getElementById('pomoCyclesWrap'),
-      settingsBtn: document.getElementById('pomoSettingsBtn'),
-      settingsMenu: document.getElementById('pomoSettingsMenu'),
-      fullscreenBtn: document.getElementById('hubFullscreenBtn'),
-      hub: document.getElementById('prodHub'),
-      dashboard: document.getElementById('dashboardLayout'),
-      pomoCard: document.getElementById('pomodoroCard'),
-      focusDisplay: document.getElementById('pomoFocusDisplay'),
-      focusTimeDisplay: document.getElementById('focusTimeDisplay'),
-      focusPhaseLabel: document.getElementById('focusPhaseLabel'),
-    };
-
-    if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.totalCycles + 1;
-    this.applySettingsToUI();
-    this.initEvents();
-    this.applyTimerModeUI();
-    this.hydrateFromStorage();
-    this.updateModeVisuals();
-    this.updateDisplay();
-    this.updateName();
-    this.updateSoundBtn();
-
-    // Set initial icon on toggle button
-    this.updateToggleBtn();
-    if (this.elements.resetBtn) this.elements.resetBtn.innerHTML = ICONS.reset;
-    if (this.elements.settingsBtn) this.elements.settingsBtn.innerHTML = ICONS.settings;
-
-    // Inline rename on timer name click
-    this.elements.nameDisplay?.addEventListener('click', () => this.startInlineRename());
+    this.volumeEl?.addEventListener('input', () => this.setVolume(parseInt(this.volumeEl.value, 10)));
+    this.focusOnlyEl?.addEventListener('change', () => {
+      this.focusOnly = this.focusOnlyEl.checked;
+      this.save();
+      this.sync();
+    });
+    this.syncUI();
   }
 
-  applySettingsToUI() {
-    const s = this.settings;
-    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    setVal('settingWorkDur', s.workDuration);       setTxt('settingWorkDurVal', s.workDuration);
-    setVal('settingShortBreak', s.shortBreakDuration); setTxt('settingShortBreakVal', s.shortBreakDuration);
+  save() {
+    Store.set(SOUND_KEY, { type: this.type, volume: this.volume, focusOnly: this.focusOnly });
   }
 
-  saveSettings() {
-    try { localStorage.setItem(POMO_SETTINGS_KEY, JSON.stringify(this.settings)); } catch {}
-  }
-
-  applyTimerModeUI() {
-    const card = this.elements.pomoCard;
-    if (!card) return;
-    if (this.timerMode === 'focus') {
-      card.classList.add('timer-mode--focus');
-      card.classList.remove('timer-mode--pomodoro');
+  select(type) {
+    this.type = type;
+    this.save();
+    clearTimeout(this.previewTimer);
+    if (type === 'off') {
+      this.stop();
     } else {
-      card.classList.add('timer-mode--pomodoro');
-      card.classList.remove('timer-mode--focus');
+      this.play();
+      // With "only while focusing" on, a pick outside a session is a short preview
+      if (!this.shouldPlay()) this.previewTimer = setTimeout(() => this.sync(), 4000);
     }
-    // Update mode switch buttons
-    document.querySelectorAll('.timer-mode-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.timerMode === this.timerMode);
-    });
+    this.syncUI();
   }
 
-  initEvents() {
-    // Timer mode switch (Focus | Pomodoro)
-    document.querySelectorAll('.timer-mode-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (this.isRunning || this.focusPhase !== 'idle') {
-          if (!(await siteConfirm('Switch timer mode? This will stop the current session.'))) return;
-        }
-        this.switchTimerMode(btn.dataset.timerMode);
-      });
-    });
+  shouldPlay() {
+    return this.type !== 'off' && (!this.focusOnly || this.app.timer?.isFocusRunning());
+  }
 
-    // Pomodoro sub-tabs (focus/rest)
-    this.elements.tabs.forEach(tab => {
-      tab.addEventListener('click', async () => {
-        if (this.isRunning) {
-          if (!(await siteConfirm('Switch mode? This will reset the current timer.'))) return;
-        }
-        this.setMode(tab.dataset.mode);
-      });
-    });
+  // Follow the timer: called whenever it starts, pauses or changes phase
+  sync() {
+    const want = this.shouldPlay();
+    if (want && !this.graph && AudioHub.ctx) this.play();
+    else if (!want && this.graph) this.stop();
+  }
 
-    this.elements.toggleBtn?.addEventListener('click', () => this.toggle());
-    this.elements.resetBtn?.addEventListener('click', async () => {
-      if (this.timerMode === 'focus') {
-        if (this.focusPhase !== 'idle') {
-          if (!(await siteConfirm('Stop and reset the timer?'))) return;
+  level() {
+    return Math.pow(this.volume / 100, 2) * 0.9;
+  }
+
+  setVolume(v) {
+    this.volume = v;
+    this.save();
+    if (this.graph) this.graph.out.gain.setTargetAtTime(this.level(), AudioHub.ctx.currentTime, 0.1);
+    this.syncUI();
+  }
+
+  buffer(color) {
+    if (this.buffers[color]) return this.buffers[color];
+    const ctx = AudioHub.ctx;
+    const length = ctx.sampleRate * 6;
+    const buf = ctx.createBuffer(2, length, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, last = 0;
+      for (let i = 0; i < length; i++) {
+        const white = Math.random() * 2 - 1;
+        if (color === 'pink') {
+          // Paul Kellet's pink noise filter
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.969 * b2 + white * 0.153852;
+          b3 = 0.8665 * b3 + white * 0.3104856;
+          b4 = 0.55 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.016898;
+          d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+          b6 = white * 0.115926;
+        } else {
+          last = (last + 0.02 * white) / 1.02;
+          d[i] = last * 3.5;
         }
-        this.resetFocus();
+      }
+      // Pull the ends together so the loop has no click
+      const drift = d[length - 1] - d[0];
+      for (let i = 0; i < length; i++) d[i] -= drift * (i / (length - 1));
+    }
+    this.buffers[color] = buf;
+    return buf;
+  }
+
+  play() {
+    const ctx = AudioHub.get();
+    if (!ctx) return;
+    this.stop(true);
+    const out = ctx.createGain();
+    out.gain.value = 0;
+    out.connect(ctx.destination);
+    const nodes = [];
+    const source = (color) => {
+      const src = ctx.createBufferSource();
+      src.buffer = this.buffer(color);
+      src.loop = true;
+      src.start();
+      nodes.push(src);
+      return src;
+    };
+    const filter = (type, freq, q) => {
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      if (q) f.Q.value = q;
+      return f;
+    };
+    const gain = (v) => {
+      const g = ctx.createGain();
+      g.gain.value = v;
+      return g;
+    };
+
+    switch (this.type) {
+      case 'rain':
+        source('pink').connect(filter('highpass', 400)).connect(filter('lowpass', 8000)).connect(gain(0.9)).connect(out);
+        break;
+      case 'waves': {
+        const swell = gain(0.5);
+        const lowpass = filter('lowpass', 600);
+        source('brown').connect(lowpass).connect(swell).connect(out);
+        const lfo = ctx.createOscillator();
+        lfo.frequency.value = 0.085;
+        lfo.connect(gain(0.42)).connect(swell.gain);
+        lfo.connect(gain(350)).connect(lowpass.frequency);
+        lfo.start();
+        nodes.push(lfo);
+        break;
+      }
+      case 'fan':
+        source('brown').connect(filter('lowpass', 380)).connect(gain(1)).connect(out);
+        source('pink').connect(filter('bandpass', 900, 0.6)).connect(gain(0.08)).connect(out);
+        break;
+      case 'brown':
+        source('brown').connect(gain(0.9)).connect(out);
+        break;
+      case 'pink':
+        source('pink').connect(gain(0.4)).connect(out);
+        break;
+      default:
+        out.disconnect();
         return;
+    }
+    out.gain.setTargetAtTime(this.level(), ctx.currentTime, 0.6);
+    this.graph = { out, nodes };
+    this.syncUI();
+  }
+
+  stop(immediate = false) {
+    if (!this.graph) return;
+    const { out, nodes } = this.graph;
+    this.graph = null;
+    const t = AudioHub.ctx.currentTime;
+    out.gain.cancelScheduledValues(t);
+    out.gain.setTargetAtTime(0, t, immediate ? 0.03 : 0.3);
+    setTimeout(() => {
+      nodes.forEach(n => { try { n.stop(); } catch {} });
+      out.disconnect();
+    }, immediate ? 150 : 1500);
+    this.syncUI();
+  }
+
+  syncUI() {
+    this.list?.querySelectorAll('.sound-option').forEach(btn => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.sound === this.type));
+    });
+    if (this.volumeEl) this.volumeEl.value = this.volume;
+    if (this.volumeVal) this.volumeVal.textContent = this.volume;
+    if (this.focusOnlyEl) this.focusOnlyEl.checked = this.focusOnly;
+    if (this.navBtn) this.navBtn.textContent = this.graph ? `sounds · ${SOUNDS[this.type].label.toLowerCase()}` : 'sounds';
+  }
+}
+
+// ── Timer ────────────────────────────────────────────────────────────────────
+
+class Timer {
+  constructor(app) {
+    this.app = app;
+    this.settings = loadSettings();
+    const saved = Store.get(TIMER_KEY, {});
+    this.mode = MODES[saved.mode] ? saved.mode : 'pomodoro';
+    this.cycles = Number.isInteger(saved.cycles) ? saved.cycles : 0; // focus sessions since the last long break
+    this.running = false;
+    this.endsAt = null;
+    this.intervalId = null;
+    this.timeLeft = this.length(this.mode);
+    this.baseTitle = document.title;
+    this.lastDevelop = null;
+    this.developTimer = null;
+
+    this.el = {
+      root: document.documentElement,
+      app: document.getElementById('app'),
+      timer: document.querySelector('.timer'),
+      modes: document.querySelectorAll('.mode'),
+      digits: document.getElementById('timerDigits'),
+      phaseName: document.getElementById('phaseName'),
+      cycleText: document.getElementById('cycleText'),
+      phaseTask: document.getElementById('phaseTask'),
+      startBtn: document.getElementById('startBtn'),
+      startIcon: document.getElementById('startIcon'),
+      startLabel: document.getElementById('startLabel'),
+      resetBtn: document.getElementById('resetBtn'),
+      skipBtn: document.getElementById('skipBtn'),
+      progress: document.getElementById('progressFill'),
+      notifyHint: document.getElementById('notifyHint')
+    };
+
+    this.bindControls();
+    this.bindSettings();
+    this.restore(saved);
+    this.render();
+  }
+
+  length(mode) {
+    return this.settings[MODES[mode].setting] * 60;
+  }
+
+  isFocusRunning() {
+    return this.running && this.mode === 'pomodoro';
+  }
+
+  save() {
+    Store.set(TIMER_KEY, {
+      mode: this.mode,
+      timeLeft: this.timeLeft,
+      endsAt: this.running ? this.endsAt : null,
+      running: this.running,
+      cycles: this.cycles
+    });
+  }
+
+  restore(saved) {
+    if (saved.running && typeof saved.endsAt === 'number') {
+      const left = Math.ceil((saved.endsAt - Date.now()) / 1000);
+      if (left > 0) {
+        this.timeLeft = left;
+        this.endsAt = saved.endsAt;
+        this.running = true;
+        this.intervalId = setInterval(() => this.tick(), 1000);
+      } else {
+        // Finished while the page was closed: log it at the time it ended
+        this.timeLeft = 0;
+        this.complete({ restored: true, at: saved.endsAt });
       }
-      if (this.isRunning || this.timeLeft < this.modes[this.currentMode]) {
-        if (!(await siteConfirm('Reset the timer?'))) return;
-      }
-      this.reset();
-    });
+    } else if (typeof saved.timeLeft === 'number' && saved.timeLeft > 0 && saved.timeLeft <= this.length(this.mode)) {
+      this.timeLeft = saved.timeLeft;
+    }
+  }
 
-    this.elements.soundBtn?.addEventListener('click', () => {
-      this.soundEnabled = !this.soundEnabled;
-      try { localStorage.setItem(POMO_SOUND_KEY, String(this.soundEnabled)); } catch {}
-      this.updateSoundBtn();
-    });
+  bindControls() {
+    this.el.startBtn?.addEventListener('click', () => this.toggle());
+    this.el.skipBtn?.addEventListener('click', () => this.skip());
+    this.el.resetBtn?.addEventListener('click', () => this.confirmReset());
 
-    this.elements.settingsBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.elements.settingsMenu?.classList.toggle('open');
-    });
-
-    document.addEventListener('click', (e) => {
-      if (this.elements.settingsMenu?.classList.contains('open') &&
-          !this.elements.settingsMenu.contains(e.target) &&
-          e.target !== this.elements.settingsBtn) {
-        this.elements.settingsMenu.classList.remove('open');
-      }
-    });
-
-    this.elements.fullscreenBtn?.addEventListener('click', () => this.toggleFullscreen());
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && this.elements.dashboard?.classList.contains('fullscreen')) {
-        this.elements.dashboard.classList.remove('fullscreen');
-        this.updateFullscreenLabel(false);
-      }
-    });
-
-    // Duration sliders
-    const bindSlider = (inputId, valId, settingKey, modeKey) => {
-      const el = document.getElementById(inputId);
-      const valEl = document.getElementById(valId);
-      if (!el) return;
-      el.addEventListener('input', () => {
-        const v = parseInt(el.value, 10);
-        if (valEl) valEl.textContent = v;
-        this.settings[settingKey] = v;
-        this.saveSettings();
-        this.modes[modeKey] = v * 60;
-        if (!this.isRunning && this.currentMode === modeKey) {
-          this.timeLeft = this.modes[modeKey];
-          this.updateDisplay();
-        }
+    this.el.modes.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const mode = btn.dataset.mode;
+        if (mode === this.mode) return;
+        if (this.running && !(await siteConfirm(`Switch to ${MODES[mode].label}? This stops the current timer.`))) return;
+        this.setMode(mode);
       });
-    };
-    bindSlider('settingWorkDur',    'settingWorkDurVal',    'workDuration',       'pomodoro');
-    bindSlider('settingShortBreak', 'settingShortBreakVal', 'shortBreakDuration', 'shortBreak');
-  }
-
-  updateSoundBtn() {
-    if (!this.elements.soundBtn) return;
-    this.elements.soundBtn.innerHTML = this.soundEnabled ? ICONS.soundOn : ICONS.soundOff;
-    this.elements.soundBtn.title = this.soundEnabled ? 'Sound on' : 'Sound off';
-  }
-
-  updateToggleBtn() {
-    const btn = this.elements.toggleBtn;
-    if (!btn) return;
-    if (this.timerMode === 'focus') {
-      if (this.focusPhase === 'working') {
-        btn.innerHTML = ICONS.pause;
-        btn.title = 'End focus, start break';
-      } else {
-        btn.innerHTML = ICONS.play;
-        btn.title = this.focusPhase === 'breaking' ? 'Resume focus' : 'Start';
-      }
-    } else {
-      const hasStarted = this.timeLeft < this.modes[this.currentMode];
-      if (this.isRunning) {
-        btn.innerHTML = ICONS.pause;
-        btn.title = 'Pause';
-      } else if (hasStarted && this.timeLeft > 0) {
-        btn.innerHTML = ICONS.play;
-        btn.title = 'Resume';
-      } else {
-        btn.innerHTML = ICONS.play;
-        btn.title = 'Start';
-      }
-    }
-  }
-
-  switchTimerMode(mode) {
-    this.stopFocusTick();
-    this.pause();
-    this.focusPhase = 'idle';
-    this.focusElapsed = 0;
-    this.breakElapsed = 0;
-    this.timerMode = mode;
-    try { localStorage.setItem(POMO_TIMER_MODE_KEY, mode); } catch {}
-    this.applyTimerModeUI();
-    if (this.timerMode === 'focus') {
-      this.updateFocusDisplay();
-      this.updateToggleBtn();
-    } else {
-      this.updateDisplay();
-      this.updateName();
-    }
-  }
-
-  // ── Focus mode ──────────────────────────────────────────────────────────────
-
-  async focusToggle() {
-    this.audio.init();
-    if (this.focusPhase === 'idle') {
-      // Subject select prompt
-      let sessionName = this.names.pomodoro || 'focus';
-      const subjectModal = window.appInstance?.subjectSelectModal;
-      if (subjectModal && this.todo?.subjects?.length > 0) {
-        const chosen = await subjectModal.show();
-        if (chosen) sessionName = chosen;
-      }
-      this._currentSessionName = sessionName;
-      this.focusPhase = 'working';
-      this.focusElapsed = 0;
-      this.startFocusTick();
-      this.updateToggleBtn();
-      if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(true);
-    } else if (this.focusPhase === 'working') {
-      this.stopFocusTick();
-      SessionLog.push({
-        id: Date.now(),
-        name: this._currentSessionName || this.names.pomodoro || 'focus',
-        type: 'focus',
-        completedAt: Date.now(),
-        duration: Math.max(1, Math.round(this.focusElapsed / 60))
-      });
-      if (this.soundEnabled && this.settings.bell) this.audio.playBell();
-      if (this.soundEnabled) setTimeout(() => this.audio.playAmbient(), 2200);
-      this.focusPhase = 'breaking';
-      this.breakElapsed = 0;
-      this.startFocusTick();
-      this.updateToggleBtn();
-      if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(false);
-    } else if (this.focusPhase === 'breaking') {
-      this.stopFocusTick();
-      const breakDur = Math.max(1, Math.round(this.breakElapsed / 60));
-      const breakTagModal = window.appInstance?.breakTagModal;
-      if (breakTagModal) {
-        const tag = await breakTagModal.show(this.breakElapsed);
-        if (tag !== null) {
-          SessionLog.push({
-            id: Date.now(), name: '#' + tag, type: 'break',
-            completedAt: Date.now(), duration: breakDur
-          });
-        }
-        // null = "don't record"
-      } else {
-        SessionLog.push({
-          id: Date.now(), name: 'break', type: 'break',
-          completedAt: Date.now(), duration: breakDur
-        });
-      }
-      this.focusPhase = 'working';
-      this.focusElapsed = 0;
-      this.startFocusTick();
-      if (this.soundEnabled && this.settings.bell) this.audio.playBell();
-      this.updateToggleBtn();
-      if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(true);
-    }
-  }
-
-  startFocusTick() {
-    clearInterval(this.focusTimerId);
-    this.focusTimerId = setInterval(() => {
-      if (this.focusPhase === 'working') {
-        this.focusElapsed++;
-        if (this.soundEnabled && this.settings.tickingSound) this.audio.playTick();
-      } else if (this.focusPhase === 'breaking') {
-        this.breakElapsed++;
-      }
-      this.updateFocusDisplay();
-    }, 1000);
-  }
-
-  stopFocusTick() {
-    clearInterval(this.focusTimerId);
-    this.focusTimerId = null;
-  }
-
-  resetFocus() {
-    this.stopFocusTick();
-    this.focusPhase = 'idle';
-    this.focusElapsed = 0;
-    this.breakElapsed = 0;
-    this.updateFocusDisplay();
-    this.updateToggleBtn();
-    document.title = this.baseTitle;
-    if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(false);
-  }
-
-  updateFocusDisplay() {
-    const formatHMS = (secs) => {
-      const h = Math.floor(secs / 3600);
-      const m = Math.floor((secs % 3600) / 60);
-      const s = secs % 60;
-      return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    };
-    const elapsed = this.focusPhase === 'breaking' ? this.breakElapsed : this.focusElapsed;
-    const label = this.focusPhase === 'breaking' ? 'break' : (this.focusPhase === 'working' ? (this.names.pomodoro || 'focus') : (this.names.pomodoro || 'focus'));
-    if (this.elements.focusTimeDisplay) this.elements.focusTimeDisplay.textContent = formatHMS(elapsed);
-    if (this.elements.focusPhaseLabel) this.elements.focusPhaseLabel.textContent = label;
-    if (this.focusPhase !== 'idle') {
-      document.title = `(${formatHMS(elapsed)}) ${this.baseTitle}`;
-    } else {
-      document.title = this.baseTitle;
-    }
-  }
-
-  // ── Pomodoro mode ───────────────────────────────────────────────────────────
-
-  toggleFullscreen() {
-    const layout = this.elements.dashboard;
-    if (!layout) return;
-    const isFs = layout.classList.contains('fullscreen');
-    if (!isFs) {
-      layout.classList.add('fullscreen');
-      this.updateFullscreenLabel(true);
-      document.documentElement.requestFullscreen?.().catch(() => {});
-    } else {
-      layout.classList.remove('fullscreen');
-      this.updateFullscreenLabel(false);
-      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    }
-  }
-
-  updateFullscreenLabel(fs) {
-    const btn = this.elements.fullscreenBtn;
-    if (!btn) return;
-    btn.querySelector('.hub-fs-icon').textContent = fs ? '✕' : '⛶';
-    btn.querySelector('.hub-fs-label').textContent = fs ? 'exit' : 'focus';
-  }
-
-  defaultName(mode) {
-    return mode === 'pomodoro' ? 'focus' : 'rest';
-  }
-
-  updateName() {
-    const name = this.names[this.currentMode] || this.defaultName(this.currentMode);
-    if (this.elements.nameDisplay) this.elements.nameDisplay.textContent = name;
-  }
-
-  startInlineRename() {
-    const el = this.elements.nameDisplay;
-    if (!el) return;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = this.names[this.currentMode] || this.defaultName(this.currentMode);
-    input.className = 'pomo-inline-rename';
-    input.maxLength = 20;
-    el.replaceWith(input);
-    input.focus(); input.select();
-    const commit = () => {
-      const v = input.value.trim() || this.defaultName(this.currentMode);
-      this.names[this.currentMode] = v;
-      try { localStorage.setItem(POMO_NAMES_KEY, JSON.stringify(this.names)); } catch {}
-      input.replaceWith(el);
-      this.elements.nameDisplay = el;
-      this.updateName();
-    };
-    input.addEventListener('blur', commit);
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { input.blur(); }
-      if (e.key === 'Escape') { input.replaceWith(el); this.elements.nameDisplay = el; }
     });
   }
 
-  setMode(mode, { autoStart = false, silent = false } = {}) {
-    if (!this.modes[mode]) return;
-    this.pause();
-    this.currentMode = mode;
-    this.timeLeft = this.modes[mode];
+  bindSettings() {
+    document.querySelectorAll('[data-setting]').forEach(input => {
+      const key = input.dataset.setting;
+      const isCheckbox = input.type === 'checkbox';
+      input.addEventListener(isCheckbox ? 'change' : 'input', () => {
+        this.set(key, isCheckbox ? input.checked : parseInt(input.value, 10));
+      });
+    });
 
-    this.elements.tabs.forEach(t => t.classList.remove('active'));
-    document.querySelector(`.pomo-tab[data-mode="${mode}"]`)?.classList.add('active');
+    const notifyEl = document.getElementById('setNotify');
+    notifyEl?.addEventListener('change', async () => {
+      if (notifyEl.checked) {
+        if (!('Notification' in window)) {
+          notifyEl.checked = false;
+          this.setNotifyHint('This browser can\'t show notifications.');
+          return;
+        }
+        let permission = Notification.permission;
+        if (permission === 'default') permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          notifyEl.checked = false;
+          this.setNotifyHint('Notifications are blocked for this site. Allow them in your browser\'s site settings, then turn this on again.');
+          return;
+        }
+      }
+      this.set('notify', notifyEl.checked);
+    });
 
-    this.updateModeVisuals();
-    this.updateDisplay();
-    this.updateName();
-    this.saveState();
-
-    if (autoStart && !silent) this.start();
+    this.syncSettingsUI();
   }
 
-  updateModeVisuals() {
-    if (!this.elements.progress) return;
-    if (this.currentMode === 'pomodoro') this.elements.progress.style.stroke = '';
-    else this.elements.progress.style.stroke = '#888888';
+  setNotifyHint(text) {
+    if (this.el.notifyHint) this.el.notifyHint.textContent = text;
   }
 
-  async toggle() {
-    if (this.timerMode === 'focus') {
-      await this.focusToggle();
-      return;
-    }
-    this.audio.init();
-    if (this.isRunning) {
-      this.pause();
-    } else {
-      this.start();
-    }
+  syncSettingsUI() {
+    document.querySelectorAll('[data-setting]').forEach(input => {
+      const value = this.settings[input.dataset.setting];
+      if (input.type === 'checkbox') input.checked = !!value;
+      else input.value = value;
+    });
+    document.querySelectorAll('[data-value]').forEach(el => {
+      const key = el.dataset.value;
+      el.textContent = key === 'goal' ? DOMUtils.fmtMinutes(this.settings.goal) : this.settings[key];
+    });
+    const notifyEl = document.getElementById('setNotify');
+    if (notifyEl) notifyEl.checked = this.settings.notify && 'Notification' in window && Notification.permission === 'granted';
   }
 
-  start() {
-    if (this.isRunning || this.timeLeft <= 0) return;
-    this.isRunning = true;
+  set(key, value) {
+    this.settings[key] = value;
+    Store.set(SETTINGS_KEY, this.settings);
+    if (MODES[this.mode].setting === key && !this.running) this.timeLeft = this.length(this.mode);
+    this.syncSettingsUI();
+    this.render();
+    if (key === 'goal') History.render();
+    this.app.tasks?.renderSummary();
+  }
+
+  toggle() {
+    this.running ? this.pause() : this.start();
+  }
+
+  start({ auto = false } = {}) {
+    if (this.running) return;
+    if (!auto) AudioHub.get();
+    if (this.timeLeft <= 0) this.timeLeft = this.length(this.mode);
+    if (this.timeLeft === this.length(this.mode)) Quotes.next();
+    this.running = true;
     this.endsAt = Date.now() + this.timeLeft * 1000;
-    this.updateToggleBtn();
-    this.timerId = setInterval(() => this.tick(), 1000);
-    this.saveState();
-    if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(this.currentMode === 'pomodoro');
+    clearInterval(this.intervalId);
+    this.intervalId = setInterval(() => this.tick(), 1000);
+    this.save();
+    this.render();
   }
 
   pause() {
-    if (this.isRunning && this.endsAt) {
-      this.timeLeft = Math.max(0, Math.ceil((this.endsAt - Date.now()) / 1000));
-    }
-    this.isRunning = false;
+    if (!this.running) return;
+    this.timeLeft = Math.max(0, Math.ceil((this.endsAt - Date.now()) / 1000));
+    this.running = false;
     this.endsAt = null;
-    this.updateToggleBtn();
-    clearInterval(this.timerId);
-    document.title = this.baseTitle;
-    this.saveState();
-    if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(false);
+    clearInterval(this.intervalId);
+    this.save();
+    this.render();
+  }
+
+  async confirmReset() {
+    const started = this.running || this.timeLeft < this.length(this.mode);
+    if (!started) return;
+    if (this.mode === 'pomodoro' && !(await siteConfirm('Reset this focus session? It won\'t be logged.'))) return;
+    this.reset();
   }
 
   reset() {
-    this.pause();
-    this.timeLeft = this.modes[this.currentMode];
-    this.updateDisplay();
-    this.saveState();
+    this.running = false;
+    this.endsAt = null;
+    clearInterval(this.intervalId);
+    this.timeLeft = this.length(this.mode);
+    this.save();
+    this.render();
+  }
+
+  setMode(mode, { autoStart = false } = {}) {
+    if (!MODES[mode]) return;
+    if (this.mode === 'longBreak' && mode === 'pomodoro') this.cycles = 0;
+    clearInterval(this.intervalId);
+    this.running = false;
+    this.endsAt = null;
+    this.mode = mode;
+    this.timeLeft = this.length(mode);
+    this.save();
+    this.render();
+    if (autoStart) this.start({ auto: true });
+  }
+
+  // Move on without logging the current phase
+  skip() {
+    const wasRunning = this.running;
+    this.setMode(this.mode === 'pomodoro' ? 'shortBreak' : 'pomodoro', { autoStart: wasRunning });
   }
 
   tick() {
     this.timeLeft = Math.max(0, Math.ceil((this.endsAt - Date.now()) / 1000));
-    this.updateDisplay();
-    if (this.soundEnabled && this.settings.tickingSound) this.audio.playTick();
-
+    if (this.mode === 'pomodoro' && this.settings.tick && !document.hidden) Chime.tick();
     if (this.timeLeft <= 0) {
-      this.onComplete();
+      this.complete();
+      return;
+    }
+    this.renderTime();
+    if (this.timeLeft % 5 === 0) this.save();
+  }
+
+  // restored: the phase ended while the page was closed, so no bell, notification or auto-start
+  complete({ restored = false, at = Date.now() } = {}) {
+    clearInterval(this.intervalId);
+    this.running = false;
+    this.endsAt = null;
+    if (!restored && this.settings.bell) Chime.bell();
+
+    if (this.mode === 'pomodoro') {
+      this.cycles++;
+      const task = this.app.tasks?.creditActive();
+      History.add({ type: 'focus', name: task || 'focus', minutes: this.settings.focus, at });
+      const long = this.cycles >= this.settings.longEvery;
+      const next = long ? `${this.settings.longBreak}-minute long break` : `${this.settings.shortBreak}-minute break`;
+      if (!restored) {
+        this.app.toast('Observed.', `${this.settings.focus} minutes${task ? ` on ${task}` : ' of focus'}. Time for a ${next}.`);
+        this.app.notify('Focus session done', `Time for a ${next}.`);
+      }
+      this.setMode(long ? 'longBreak' : 'shortBreak', { autoStart: !restored && this.settings.autoBreak });
     } else {
-      if (this.timeLeft % 5 === 0) this.saveState();
+      const long = this.mode === 'longBreak';
+      History.add({
+        type: 'break',
+        kind: long ? 'long' : 'short',
+        name: MODES[this.mode].label,
+        minutes: this.settings[MODES[this.mode].setting],
+        at
+      });
+      if (!restored) {
+        this.app.toast('Back to the present.', this.settings.autoFocus ? 'The next focus session has started.' : 'The next focus session is ready when you are.');
+        this.app.notify('Break over', 'Ready for the next focus session?');
+      }
+      this.setMode('pomodoro', { autoStart: !restored && this.settings.autoFocus });
     }
   }
 
-  onComplete() {
-    this.pause();
-    if (this.soundEnabled && this.settings.bell) this.audio.playBell();
-
-    if (this.currentMode === 'pomodoro') {
-      this.totalCycles++;
-      try { localStorage.setItem(POMO_STATS_KEY, JSON.stringify({ cycles: this.totalCycles })); } catch {}
-      if (this.elements.cycleInfo) this.elements.cycleInfo.textContent = this.totalCycles + 1;
-      SessionLog.push({ id: Date.now(), name: this.names.pomodoro || 'focus', type: 'pomodoro', completedAt: Date.now(), duration: this.settings.workDuration });
-      this.setMode('shortBreak');
-    } else {
-      this.setMode('pomodoro');
-    }
-  }
-
-  updateDisplay() {
-    if (this.timerMode === 'focus') return;
+  clockText() {
     const mins = Math.floor(this.timeLeft / 60);
     const secs = this.timeLeft % 60;
-    const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    if (this.elements.time) this.elements.time.textContent = formatted;
-
-    document.title = this.isRunning ? `(${formatted}) ${this.baseTitle}` : this.baseTitle;
-
-    if (this.elements.progress) {
-      const total = this.modes[this.currentMode];
-      const percent = total > 0 ? this.timeLeft / total : 0;
-      this.elements.progress.style.strokeDashoffset = -POMO_CIRCUMFERENCE * (1 - percent);
-    }
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
 
-  saveState() {
-    try {
-      const payload = {
-        mode: this.currentMode,
-        timeLeft: this.timeLeft,
-        isRunning: this.isRunning,
-        endsAt: this.endsAt,
-        timerMode: this.timerMode,
-        savedAt: Date.now()
-      };
-      localStorage.setItem(POMO_STATE_KEY, JSON.stringify(payload));
-    } catch {}
+  startLabel() {
+    if (this.running) return 'pause';
+    return this.timeLeft < this.length(this.mode) ? 'resume' : 'start';
   }
 
-  hydrateFromStorage() {
-    let state = null;
-    try { state = JSON.parse(localStorage.getItem(POMO_STATE_KEY)); } catch {}
-    if (!state) return;
+  phaseLabel() {
+    if (this.mode !== 'pomodoro') return MODES[this.mode].label;
+    return this.app.tasks?.activeText() || 'focus';
+  }
 
-    // Restore timer mode
-    if (state.timerMode === 'focus' || state.timerMode === 'pomodoro') {
-      this.timerMode = state.timerMode;
-    }
+  cycleLabel() {
+    const every = this.settings.longEvery;
+    if (this.mode === 'pomodoro') return `session ${Math.min(this.cycles + 1, every)} of ${every}`;
+    if (this.mode === 'longBreak') return `${every} of ${every} done`;
+    return `${Math.min(this.cycles, every)} of ${every} done`;
+  }
 
-    // Restore pomodoro sub-mode (guard against removed longBreak)
-    if (state.mode && this.modes[state.mode]) {
-      this.currentMode = state.mode;
-      this.elements.tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === this.currentMode));
-    }
-
-    if (this.timerMode === 'pomodoro' && state.isRunning && typeof state.endsAt === 'number') {
-      const remaining = Math.ceil((state.endsAt - Date.now()) / 1000);
-      if (remaining > 0) {
-        this.timeLeft = remaining;
-        this.endsAt = state.endsAt;
-        this.isRunning = true;
-        this.updateToggleBtn();
-        this.timerId = setInterval(() => this.tick(), 1000);
-        if (window.appInstance?.companion) window.appInstance.companion.setWorkingState(this.currentMode === 'pomodoro');
-      } else {
-        this.timeLeft = 0;
-        this.onComplete();
+  // The picture resolves from grey to colour over a focus session, in 1% steps
+  updateDevelop() {
+    const root = this.el.root;
+    const enabled = this.app.wallpaper?.prefs.develop !== false;
+    const inSession = this.mode === 'pomodoro' && (this.running || this.timeLeft < this.length(this.mode));
+    if (!enabled || !inSession) {
+      if (this.lastDevelop !== 1) {
+        this.lastDevelop = 1;
+        root.style.setProperty('--develop', '1');
+        // Keep the soft print underneath until the sharp one has faded back in
+        clearTimeout(this.developTimer);
+        this.developTimer = setTimeout(() => root.removeAttribute('data-developing'), DEVELOP_FADE_MS);
       }
-    } else if (this.timerMode === 'pomodoro') {
-      this.timeLeft = (typeof state.timeLeft === 'number' && state.timeLeft > 0) ? state.timeLeft : this.modes[this.currentMode];
+      return;
     }
+    clearTimeout(this.developTimer);
+    root.setAttribute('data-developing', '');
+    const step = Math.floor((1 - this.timeLeft / this.length(this.mode)) * 100) / 100;
+    if (step !== this.lastDevelop) {
+      this.lastDevelop = step;
+      root.style.setProperty('--develop', step.toFixed(2));
+    }
+  }
+
+  renderTime() {
+    const text = this.clockText();
+    DOMUtils.setDigits(this.el.digits, text);
+    const elapsed = Math.max(0, 1 - this.timeLeft / this.length(this.mode));
+    if (this.el.progress) this.el.progress.style.width = `${(elapsed * 100).toFixed(2)}%`;
+    document.title = this.running ? `(${text}) ${this.baseTitle}` : this.baseTitle;
+    this.updateDevelop();
+    this.app.tabIcon?.render(this);
+    this.app.popout?.render();
+  }
+
+  render() {
+    const rest = this.mode !== 'pomodoro';
+    this.el.root.dataset.phase = rest ? 'rest' : 'focus';
+    this.el.timer?.classList.toggle('is-rest', rest);
+    this.el.timer?.classList.toggle('is-running', this.running);
+    this.el.app?.classList.toggle('is-running', this.running);
+
+    this.el.modes.forEach(btn => btn.setAttribute('aria-selected', String(btn.dataset.mode === this.mode)));
+    if (this.el.phaseName) this.el.phaseName.textContent = MODES[this.mode].label;
+    if (this.el.cycleText) this.el.cycleText.textContent = this.cycleLabel();
+
+    const task = this.app.tasks?.activeText();
+    if (this.el.phaseTask) {
+      this.el.phaseTask.textContent = task || 'pick a task';
+      this.el.phaseTask.classList.toggle('is-empty', !task);
+    }
+
+    const label = this.startLabel();
+    if (this.el.startIcon) this.el.startIcon.innerHTML = this.running ? ICONS.pause : ICONS.play;
+    if (this.el.startLabel) this.el.startLabel.textContent = label;
+    if (this.el.startBtn) this.el.startBtn.title = `${label[0].toUpperCase()}${label.slice(1)} (Space)`;
+
+    this.renderTime();
+    this.app.onTimerChange?.();
   }
 }
 
-const TODO_KEY = '0bsidian_todos_v2';
+// ── Tasks ────────────────────────────────────────────────────────────────────
 
-class TodoManager {
-  constructor() {
-    this.list = document.getElementById('todoList');
-    this.input = document.getElementById('todoInput');
-    this.color = document.getElementById('todoColor');
-    this.addBtn = document.getElementById('todoAdd');
+class Tasks {
+  constructor(app) {
+    this.app = app;
+    const saved = Store.get(TASKS_KEY, {});
+    this.items = Array.isArray(saved.items) ? saved.items.filter(t => t && typeof t.text === 'string') : [];
+    this.activeId = saved.activeId ?? null;
+    this.est = 1;
 
-    this.subjects = [];
-    try { this.subjects = JSON.parse(localStorage.getItem(TODO_KEY)) || []; } catch {}
+    this.form = document.getElementById('taskForm');
+    this.input = document.getElementById('taskInput');
+    this.estVal = document.getElementById('taskEst');
+    this.list = document.getElementById('taskList');
+    this.summary = document.getElementById('taskSummary');
+    this.clearBtn = document.getElementById('clearFinishedBtn');
 
-    this.initEvents();
-    this.render();
-  }
-
-  initEvents() {
-    this.addBtn?.addEventListener('click', () => this.addSubject());
-    this.input?.addEventListener('keydown', e => {
-      if (e.key === 'Enter') this.addSubject();
+    this.form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = this.input.value.trim();
+      if (!text) return;
+      this.add(text, this.est);
+      this.input.value = '';
+      this.est = 1;
+      this.renderEst();
     });
+    document.getElementById('taskEstDown')?.addEventListener('click', () => { this.est = Math.max(1, this.est - 1); this.renderEst(); });
+    document.getElementById('taskEstUp')?.addEventListener('click', () => { this.est = Math.min(20, this.est + 1); this.renderEst(); });
+    this.clearBtn?.addEventListener('click', () => this.clearFinished());
+
+    this.renderEst();
+    this.render();
   }
 
-  addSubject() {
-    const val = this.input.value.trim();
-    if (!val) return;
-    this.subjects.push({ id: Date.now(), subject: val, color: this.color.value, tasks: [] });
-    this.input.value = '';
-    // Smart duration presets
-    const pomo = window.appInstance?.pomodoro;
-    if (pomo) {
-      const lower = val.toLowerCase();
-      if (lower.includes('uworld')) {
-        pomo.settings.workDuration = 60;
-        pomo.modes.pomodoro = 3600;
-        pomo.saveSettings();
-        const el = document.getElementById('settingWorkDur');
-        const valEl = document.getElementById('settingWorkDurVal');
-        if (el) el.value = 60;
-        if (valEl) valEl.textContent = 60;
-      } else if (lower.includes('first aid') || lower.includes('bootcamp')) {
-        pomo.settings.workDuration = 25;
-        pomo.modes.pomodoro = 1500;
-        pomo.saveSettings();
-        const el = document.getElementById('settingWorkDur');
-        const valEl = document.getElementById('settingWorkDurVal');
-        if (el) el.value = 25;
-        if (valEl) valEl.textContent = 25;
-      }
+  save() {
+    Store.set(TASKS_KEY, { items: this.items, activeId: this.activeId });
+  }
+
+  changed() {
+    this.save();
+    this.render();
+    this.app.timer?.render();
+  }
+
+  renderEst() {
+    if (this.estVal) this.estVal.textContent = this.est;
+  }
+
+  add(text, est) {
+    const task = { id: Date.now(), text, est, done: 0, finished: false };
+    this.items.push(task);
+    if (!this.active()) this.activeId = task.id;
+    this.changed();
+  }
+
+  find(id) {
+    return this.items.find(t => t.id === id);
+  }
+
+  active() {
+    const task = this.find(this.activeId);
+    return task && !task.finished ? task : null;
+  }
+
+  activeText() {
+    return this.active()?.text || null;
+  }
+
+  // A focus session finished: count it towards the active task
+  creditActive() {
+    const task = this.active();
+    if (!task) return null;
+    task.done++;
+    this.changed();
+    return task.text;
+  }
+
+  setActive(id) {
+    const task = this.find(id);
+    if (!task || task.finished) return;
+    this.activeId = id;
+    this.changed();
+  }
+
+  toggleFinished(id) {
+    const task = this.find(id);
+    if (!task) return;
+    task.finished = !task.finished;
+    if (task.finished && this.activeId === id) {
+      this.activeId = this.items.find(t => !t.finished)?.id ?? null;
+    } else if (!task.finished && !this.active()) {
+      this.activeId = id;
     }
-    this.save();
-    this.render();
+    this.changed();
   }
 
-  addTask(subjectId, text) {
-    const subj = this.subjects.find(s => s.id === subjectId);
-    if (!subj || !text.trim()) return;
-    subj.tasks.push({ id: Date.now(), text: text.trim(), done: false });
-    this.save();
-    this.render();
+  adjust(id, delta) {
+    const task = this.find(id);
+    if (!task) return;
+    task.est = Math.min(20, Math.max(1, task.est + delta));
+    this.changed();
   }
 
-  toggleTask(subjectId, taskId) {
-    const subj = this.subjects.find(s => s.id === subjectId);
-    if (!subj) return;
-    const task = subj.tasks.find(t => t.id === taskId);
-    if (task) { task.done = !task.done; this.save(); this.render(); }
+  remove(id) {
+    this.items = this.items.filter(t => t.id !== id);
+    if (this.activeId === id) this.activeId = this.items.find(t => !t.finished)?.id ?? null;
+    this.changed();
   }
 
-  removeTask(subjectId, taskId) {
-    const subj = this.subjects.find(s => s.id === subjectId);
-    if (!subj) return;
-    subj.tasks = subj.tasks.filter(t => t.id !== taskId);
-    this.save();
-    this.render();
-  }
-
-  removeSubject(subjectId) {
-    this.subjects = this.subjects.filter(s => s.id !== subjectId);
-    this.save();
-    this.render();
-  }
-
-  save() { localStorage.setItem(TODO_KEY, JSON.stringify(this.subjects)); }
-
-  topOpen(limit = 3) {
-    const out = [];
-    for (const s of this.subjects) {
-      for (const t of s.tasks) {
-        if (!t.done) out.push(`${s.subject}: ${t.text}`);
-        if (out.length >= limit) return out;
-      }
-    }
-    return out;
+  clearFinished() {
+    this.items = this.items.filter(t => !t.finished);
+    this.changed();
   }
 
   render() {
     if (!this.list) return;
-    this.list.replaceChildren();
+    const activeId = this.active()?.id;
+    this.list.replaceChildren(...this.items.map(task => {
+      const li = document.createElement('li');
+      li.className = 'task';
+      li.classList.toggle('is-active', task.id === activeId);
+      li.classList.toggle('is-finished', task.finished);
 
-    this.subjects.forEach(subj => {
-      const groupDiv = document.createElement('div');
-      groupDiv.className = 'todo-subject-group';
+      const text = document.createElement('button');
+      text.className = 'task-text';
+      text.textContent = task.text;
+      text.title = task.finished ? '' : 'Work on this next';
+      text.addEventListener('click', () => this.setActive(task.id));
 
-      const head = document.createElement('div');
-      head.className = 'todo-subject-header';
+      const count = document.createElement('span');
+      count.className = 'task-count';
+      const less = document.createElement('button');
+      less.textContent = '−';
+      less.setAttribute('aria-label', 'Fewer pomodoros');
+      less.addEventListener('click', () => this.adjust(task.id, -1));
+      const more = document.createElement('button');
+      more.textContent = '+';
+      more.setAttribute('aria-label', 'More pomodoros');
+      more.addEventListener('click', () => this.adjust(task.id, 1));
+      const tally = document.createElement('span');
+      tally.textContent = `${task.done}/${task.est}`;
+      tally.title = `${task.done} of ${task.est} pomodoros done`;
+      count.append(less, tally, more);
 
-      const headLeft = document.createElement('div');
-      headLeft.style.cssText = 'display:flex;align-items:center;gap:8px;flex:1;';
-      const colorDot = document.createElement('span');
-      colorDot.className = 'todo-color-dot';
-      colorDot.style.backgroundColor = subj.color;
-      headLeft.appendChild(colorDot);
-      headLeft.appendChild(document.createTextNode(' ' + subj.subject));
+      const check = document.createElement('button');
+      check.className = 'task-check';
+      check.setAttribute('role', 'checkbox');
+      check.setAttribute('aria-checked', String(task.finished));
+      check.setAttribute('aria-label', `Finished: ${task.text}`);
+      check.textContent = task.finished ? '✓' : '';
+      check.addEventListener('click', () => this.toggleFinished(task.id));
 
-      const addTaskBtn = document.createElement('button');
-      addTaskBtn.className = 'todo-add-task-btn';
-      addTaskBtn.textContent = '+';
-      addTaskBtn.title = 'Add task';
-      addTaskBtn.onclick = (e) => {
-        e.stopPropagation();
-        const existing = groupDiv.querySelector('.todo-task-input-row');
-        if (existing) { existing.remove(); return; }
-        const row = document.createElement('div');
-        row.className = 'todo-task-input-row';
-        const inp = document.createElement('input');
-        inp.type = 'text';
-        inp.placeholder = 'add task...';
-        inp.className = 'todo-task-inline-input';
-        inp.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter' && inp.value.trim()) this.addTask(subj.id, inp.value);
-          if (ev.key === 'Escape') row.remove();
-        });
-        row.appendChild(inp);
-        head.after(row);
-        inp.focus();
-      };
+      const del = document.createElement('button');
+      del.className = 'delete-btn';
+      del.textContent = '×';
+      del.setAttribute('aria-label', `Delete ${task.text}`);
+      del.addEventListener('click', () => this.remove(task.id));
 
-      const delSubjBtn = document.createElement('button');
-      delSubjBtn.className = 'todo-delete';
-      delSubjBtn.textContent = '×';
-      delSubjBtn.onclick = (e) => { e.stopPropagation(); this.removeSubject(subj.id); };
+      li.append(text, count, check, del);
+      return li;
+    }));
+    if (this.clearBtn) this.clearBtn.hidden = !this.items.some(t => t.finished);
+    this.renderSummary();
+  }
 
-      head.appendChild(headLeft);
-      head.appendChild(addTaskBtn);
-      head.appendChild(delSubjBtn);
-      groupDiv.appendChild(head);
-
-      subj.tasks.forEach(t => {
-        const item = document.createElement('div');
-        item.className = `todo-item ${t.done ? 'done' : ''}`;
-
-        const cb = document.createElement('div');
-        cb.className = 'todo-checkbox';
-        cb.textContent = t.done ? '✓' : '';
-        cb.onclick = () => this.toggleTask(subj.id, t.id);
-
-        const txt = document.createElement('div');
-        txt.className = 'todo-text';
-        txt.textContent = t.text;
-
-        const del = document.createElement('button');
-        del.className = 'todo-delete';
-        del.textContent = '×';
-        del.onclick = (e) => { e.stopPropagation(); this.removeTask(subj.id, t.id); };
-
-        item.appendChild(cb);
-        item.appendChild(txt);
-        item.appendChild(del);
-        groupDiv.appendChild(item);
-      });
-
-      this.list.appendChild(groupDiv);
-    });
+  // Pomodoros left and a rough finish time, counting the breaks in between
+  renderSummary() {
+    if (!this.summary) return;
+    const open = this.items.filter(t => !t.finished);
+    const left = open.reduce((n, t) => n + Math.max(0, t.est - t.done), 0);
+    if (this.items.length === 0) {
+      this.summary.textContent = '';
+      return;
+    }
+    if (left === 0) {
+      this.summary.textContent = open.length ? 'Estimates used up. Add pomodoros to a task to plan more.' : 'All done.';
+      return;
+    }
+    const s = this.app.timer?.settings || loadSettings();
+    let cycles = this.app.timer?.cycles || 0;
+    let minutes = left * s.focus;
+    for (let i = 1; i < left; i++) {
+      cycles++;
+      if (cycles >= s.longEvery) { minutes += s.longBreak; cycles = 0; }
+      else minutes += s.shortBreak;
+    }
+    const finish = DOMUtils.fmtClockTime(Date.now() + minutes * 60000);
+    this.summary.textContent = `${left} pomodoro${left === 1 ? '' : 's'} left, done around ${finish}`;
   }
 }
 
-class SessionLog {
-  static MAX = 100;
+// ── History and stats ────────────────────────────────────────────────────────
+
+class History {
+  static MAX = 300;
 
   static load() {
-    try { return JSON.parse(localStorage.getItem(POMO_LOG_KEY)) || []; } catch { return []; }
+    const log = Store.get(HISTORY_KEY, []);
+    return Array.isArray(log) ? log : [];
   }
 
   static save(log) {
-    try { localStorage.setItem(POMO_LOG_KEY, JSON.stringify(log)); } catch {}
+    Store.set(HISTORY_KEY, log);
   }
 
-  static push(entry) {
+  static isToday(ts) {
+    return new Date(ts).toDateString() === new Date().toDateString();
+  }
+
+  static focusMinutesToday(log) {
+    return log.filter(e => e.type === 'focus' && this.isToday(e.at)).reduce((n, e) => n + e.minutes, 0);
+  }
+
+  static add(entry) {
     const log = this.load();
-    log.unshift(entry);
-    if (log.length > this.MAX) log.splice(this.MAX);
+    const before = this.focusMinutesToday(log);
+    log.unshift({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...entry });
+    if (log.length > this.MAX) log.length = this.MAX;
     this.save(log);
+    const goal = loadSettings().goal;
+    const after = this.focusMinutesToday(log);
+    if (before < goal && after >= goal) {
+      window.app?.toast?.('Daily goal reached.', `${DOMUtils.fmtMinutes(after)} of focus today.`);
+    }
     this.render();
   }
 
-  static fmtTime(ts) {
-    const d = new Date(ts);
-    const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-    const isYesterday = d.toDateString() === yesterday.toDateString();
-    const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (isToday) return t;
-    if (isYesterday) return `yesterday ${t}`;
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + t;
-  }
-
-  static render() {
-    const container = document.getElementById('sessionLog');
-    const countEl = document.getElementById('sessionLogCount');
-    if (!container) return;
-    const log = this.load();
-    if (countEl) countEl.textContent = log.length;
-
-    container.replaceChildren();
-
-    if (log.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'session-empty';
-      empty.textContent = 'completed pomodoros will appear here';
-      container.appendChild(empty);
-      return;
-    }
-
-    log.forEach(entry => {
-      const item = document.createElement('div');
-      item.className = 'session-item';
-
-      const dot = document.createElement('span');
-      dot.className = 'session-dot';
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'session-name';
-      nameEl.textContent = entry.name;
-      nameEl.title = 'click to rename';
-      nameEl.onclick = () => this.startRename(entry.id, nameEl, log);
-
-      const meta = document.createElement('span');
-      meta.className = 'session-meta';
-      meta.textContent = `${entry.duration}m · ${this.fmtTime(entry.completedAt)}`;
-
-      const del = document.createElement('button');
-      del.className = 'session-delete pop-btn';
-      del.textContent = '×';
-      del.title = 'Remove';
-      del.onclick = () => this.delete(entry.id);
-
-      item.append(dot, nameEl, meta, del);
-      container.appendChild(item);
-    });
-  }
-
-  static startRename(id, nameEl, log) {
-    const entry = log.find(e => e.id === id);
-    if (!entry) return;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'session-rename-input';
-    input.value = entry.name;
-    input.maxLength = 40;
-    nameEl.replaceWith(input);
-    input.focus();
-    input.select();
-    const commit = () => {
-      const val = input.value.trim();
-      if (val) { entry.name = val; this.save(log); }
-      this.render();
-    };
-    input.addEventListener('blur', commit);
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); commit(); }
-      if (e.key === 'Escape') this.render();
-    });
-  }
-
-  static delete(id) {
+  static remove(id) {
     this.save(this.load().filter(e => e.id !== id));
     this.render();
   }
@@ -1248,525 +1021,1169 @@ class SessionLog {
     this.save([]);
     this.render();
   }
-}
 
-const BUDDY_KEY = '0bsidian_pet_id';
+  static fmtWhen(ts) {
+    const d = new Date(ts);
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const time = DOMUtils.fmtClockTime(ts);
+    if (d.toDateString() === now.toDateString()) return time;
+    if (d.toDateString() === yesterday.toDateString()) return `yesterday ${time}`;
+    return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${time}`;
+  }
 
-class StudyCompanion {
-  constructor(todo) {
-    this.todo = todo;
-    this.container = document.querySelector('.study-companion');
-    this.artEl = document.getElementById('companionArt');
-    this.speechEl = document.getElementById('companionSpeech');
-    if (!this.artEl || !this.container) return;
-
-    this.buddies = [
-      { id: 1, name: 'Apollo', art: "  __\n<(o )___\n ( ._> /\n  `---'", personality: 'focused', effect: 'flash' },
-      { id: 2, name: 'Hermes', art: " .-. \n(o o)\n| O \\\n \\   \\\n  `~~~'", personality: 'energetic', effect: 'blur-dash' },
-      { id: 3, name: 'Athena', art: " ,___,\n [O.o]\n /)__)\n  \" \"", personality: 'strategic', effect: 'fade' },
-      { id: 4, name: 'Artemis', art: " /\\_/\\\n( o.o )\n > ^ <", personality: 'calm', effect: 'shimmer' },
-      { id: 5, name: 'Hephaestus', art: " [0_0]\n /| |\\\n  |_|", personality: 'methodical', effect: 'pixelate' },
-      { id: 6, name: 'Dionysus', art: "  ___\n (o o)\n(  _  )", personality: 'creative', effect: 'confetti-poof' },
-      { id: 7, name: 'Hestia', art: "  .----.\n /      \\\n(   @  @ )\n \\  --  /\n  `----'", personality: 'nurturing', effect: 'ember' },
-      { id: 8, name: 'Ares', art: "  /\\\n (  )\n  \\/", personality: 'driven', effect: 'glitch' },
-      { id: 9, name: 'Poseidon', art: "  ,-.\n (o o)\n /| |\\", personality: 'analytical', effect: 'ripple' },
-      { id: 10, name: 'Zeus', art: " ^...^\n<_* *_>\n  \\_/", personality: 'decisive', effect: 'lightning' }
-    ];
-
-    let saved = localStorage.getItem(BUDDY_KEY);
-    if (!saved) {
-      saved = this.buddies[Math.floor(Math.random() * this.buddies.length)].id;
-      localStorage.setItem(BUDDY_KEY, saved);
+  // Consecutive days with a focus session, counting back from today (or yesterday)
+  static streak(log) {
+    const days = new Set(log.filter(e => e.type === 'focus').map(e => new Date(e.at).toDateString()));
+    const day = new Date();
+    if (!days.has(day.toDateString())) day.setDate(day.getDate() - 1);
+    let n = 0;
+    while (days.has(day.toDateString())) {
+      n++;
+      day.setDate(day.getDate() - 1);
     }
-    this.buddy = this.buddies.find(b => b.id == saved) || this.buddies[0];
+    return n;
+  }
 
-    this.artEl.textContent = this.buddy.art;
-    this.isWorking = false;
-    this.thoughtTimer = null;
-    this.lastMessage = `${this.buddy.name} here. ${this.personalityIntro()}`;
+  static render() {
+    const log = this.load();
+    const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    const today = log.filter(e => this.isToday(e.at));
+    const focus = today.filter(e => e.type === 'focus');
+    const focusMin = focus.reduce((n, e) => n + e.minutes, 0);
+    const goal = loadSettings().goal;
 
-    this.side = Math.random() < 0.5 ? 'left' : 'right';
-    this.mouseX = window.innerWidth / 2;
-    this.mouseY = window.innerHeight / 2;
-    this.lastTeleportAt = 0;
-
-    this.positionOnEdge();
-
-    this.artEl.addEventListener('click', () => {
-      this.say(this.lastMessage);
-      this.teleport();
+    // Counts beside the phase names
+    [
+      ['countFocus', focus.length],
+      ['countShort', today.filter(e => e.kind === 'short').length],
+      ['countLong', today.filter(e => e.kind === 'long').length]
+    ].forEach(([id, n]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = n;
+      el.toggleAttribute('data-zero', n === 0);
     });
 
-    window.addEventListener('resize', () => this.positionOnEdge());
-    window.addEventListener('mousemove', this.throttle((e) => {
-      this.mouseX = e.clientX;
-      this.mouseY = e.clientY;
-      this.reactToCursor();
-    }, 200));
+    const todayText = document.getElementById('todayText');
+    if (todayText) {
+      todayText.textContent = `${DOMUtils.fmtMinutes(focusMin)} / ${DOMUtils.fmtMinutes(goal)}`;
+      todayText.classList.toggle('is-met', focusMin >= goal);
+    }
+    setText('goalText', `${DOMUtils.fmtMinutes(focusMin)} of ${DOMUtils.fmtMinutes(goal)}`);
+    const fill = document.getElementById('goalFill');
+    if (fill) fill.style.width = `${Math.min(100, (focusMin / goal) * 100).toFixed(1)}%`;
 
-    setTimeout(() => this.say(this.lastMessage), 1500);
-    this.scheduleNextTeleport();
+    setText('statFocus', DOMUtils.fmtMinutes(focusMin));
+    setText('statSessions', focus.length);
+    setText('statStreak', this.streak(log));
+
+    // Today's worldline: every session on a 24-hour line
+    const strip = document.getElementById('dayStrip');
+    if (strip) {
+      const DAY = 86400000;
+      const midnight = new Date();
+      midnight.setHours(0, 0, 0, 0);
+      const start0 = midnight.getTime();
+      const pct = ms => `${(((ms - start0) / DAY) * 100).toFixed(3)}%`;
+      const segs = today.map(e => {
+        const start = Math.max(start0, e.at - e.minutes * 60000);
+        const seg = document.createElement('span');
+        seg.className = e.type === 'break' ? 'day-seg day-seg--break' : 'day-seg';
+        seg.style.left = pct(start);
+        seg.style.width = `${(((e.at - start) / DAY) * 100).toFixed(3)}%`;
+        seg.title = `${e.name} · ${e.minutes}m`;
+        return seg;
+      });
+      const now = document.createElement('span');
+      now.className = 'day-now';
+      now.style.left = pct(Date.now());
+      strip.replaceChildren(...segs, now);
+    }
+
+    setText('historyCount', log.length);
+    const list = document.getElementById('historyList');
+    if (!list) return;
+    list.replaceChildren(...log.map(entry => {
+      const li = document.createElement('li');
+      li.className = entry.type === 'break' ? 'history-item history-item--break' : 'history-item';
+      const dot = document.createElement('span');
+      dot.className = 'history-dot';
+      const name = document.createElement('span');
+      name.className = 'history-name';
+      name.textContent = entry.name;
+      const meta = document.createElement('span');
+      meta.className = 'history-meta';
+      meta.textContent = `${entry.minutes}m · ${this.fmtWhen(entry.at)}`;
+      const del = document.createElement('button');
+      del.className = 'delete-btn';
+      del.textContent = '×';
+      del.setAttribute('aria-label', `Remove ${entry.name}`);
+      del.addEventListener('click', () => this.remove(entry.id));
+      li.append(dot, name, meta, del);
+      return li;
+    }));
+  }
+}
+
+// ── Built-in scenes, painted on a canvas ─────────────────────────────────────
+
+const SCENES = {
+  winden: {
+    label: 'Winden', caption: 'A fog-bound forest at night.', theme: '#0a0e11',
+    sky: ['#06090b', '#121c22', '#34444b'], haze: '#52636a', near: '#030506',
+    stars: 0.12, rough: 0.38, trees: true, fog: 0.3, light: [0.72, 0.2, 0.028, '214, 222, 226']
+  },
+  horizon: {
+    label: 'Event horizon', caption: 'A black hole and its accretion disk, bent by its own gravity.', theme: '#050407',
+    blackHole: true
+  },
+  obsidian: {
+    label: 'Obsidian', caption: 'Ridges of volcanic glass under a violet sky.', theme: '#0b0915',
+    sky: ['#07060f', '#16112e', '#3a2660'], haze: '#5b4288', near: '#050409',
+    stars: 1, rough: 0.6, fog: 0.16, light: [0.76, 0.27, 0.045, '226, 214, 255']
+  },
+  glacier: {
+    label: 'Glacier', caption: 'Cold ridges in the hour before dawn.', theme: '#08131f',
+    sky: ['#050b14', '#0f2944', '#4d82a6'], haze: '#6b9bbd', near: '#040910',
+    stars: 0.6, rough: 0.68, fog: 0.16, light: [0.2, 0.25, 0.035, '225, 240, 255']
+  }
+};
+
+class Scenery {
+  constructor() {
+    this.canvases = [document.getElementById('sceneSharp'), document.getElementById('sceneSoft')].filter(Boolean);
+    this.grid = document.getElementById('sceneGrid');
+    const saved = Store.get(SCENE_KEY, 'winden');
+    this.current = SCENES[saved] ? saved : 'winden';
+    this.swatchesDrawn = false;
+    this.lastSize = '';
+    this.onPick = null;
+
+    this.buildPicker();
+    this.apply(this.current, { save: false });
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => this.paintMain(), 150);
+    });
   }
 
-  personalityIntro() {
-    const p = this.buddy.personality;
-    if (p === 'focused') return "deep work mode. let's go.";
-    if (p === 'energetic') return "energy is high. let's crush this.";
-    if (p === 'strategic') return 'plan first. execute cleanly.';
-    if (p === 'calm') return "take a breath. you're doing great.";
-    if (p === 'methodical') return 'one task at a time. steady.';
-    if (p === 'creative') return 'think different. ideas are waiting.';
-    if (p === 'nurturing') return "you've got this. I'm rooting for you.";
-    if (p === 'driven') return 'no distractions. push through.';
-    if (p === 'analytical') return 'data says: focus time is now.';
-    if (p === 'decisive') return 'decide. act. move forward.';
-    return 'ready when you are.';
+  get scene() {
+    return SCENES[this.current];
   }
 
-  throttle(fn, ms) {
-    let last = 0;
-    return (...args) => {
-      const now = Date.now();
-      if (now - last >= ms) { last = now; fn(...args); }
+  buildPicker() {
+    if (!this.grid) return;
+    Object.entries(SCENES).forEach(([id, scene]) => {
+      const btn = document.createElement('button');
+      btn.className = 'thumb';
+      btn.dataset.scene = id;
+      const swatch = document.createElement('canvas');
+      swatch.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.textContent = scene.label;
+      btn.append(swatch, label);
+      btn.addEventListener('click', () => {
+        this.apply(id);
+        this.onPick?.(id);
+      });
+      this.grid.appendChild(btn);
+    });
+  }
+
+  renderSwatches() {
+    if (this.swatchesDrawn || !this.grid) return;
+    this.grid.querySelectorAll('.thumb').forEach(btn => {
+      const c = btn.querySelector('canvas');
+      if (c && c.clientWidth) Scenery.paint(c, SCENES[btn.dataset.scene], c.clientWidth, c.clientHeight);
+    });
+    this.swatchesDrawn = true;
+  }
+
+  markActive(active) {
+    this.grid?.querySelectorAll('.thumb').forEach(btn => {
+      btn.setAttribute('aria-pressed', String(active && btn.dataset.scene === this.current));
+    });
+  }
+
+  apply(id, { save = true } = {}) {
+    if (!SCENES[id]) return;
+    this.current = id;
+    document.documentElement.dataset.scene = id;
+    if (save) Store.set(SCENE_KEY, id);
+    this.markActive(true);
+    this.lastSize = '';
+    this.paintMain();
+  }
+
+  paintMain() {
+    const first = this.canvases[0];
+    if (!first) return;
+    const w = first.clientWidth || window.innerWidth;
+    const h = first.clientHeight || window.innerHeight;
+    const size = `${this.current}:${w}x${h}`;
+    if (size === this.lastSize) return;
+    this.lastSize = size;
+    this.canvases.forEach(c => {
+      Scenery.paint(c, this.scene, w, h);
+      c.classList.add('is-ready');
+    });
+  }
+
+  static rng(seedText) {
+    let a = 0;
+    for (const ch of seedText) a = Math.imul(a ^ ch.charCodeAt(0), 2654435761) >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
 
-  positionOnEdge() {
-    // Companion lives in the topbar — clear any stale inline styles
-    if (this.container) this.container.removeAttribute('style');
+  static mix(hexA, hexB, t, alpha = 1) {
+    const a = parseInt(hexA.slice(1), 16), b = parseInt(hexB.slice(1), 16);
+    const ch = shift => Math.round(((a >> shift) & 255) + (((b >> shift) & 255) - ((a >> shift) & 255)) * t);
+    return `rgba(${ch(16)}, ${ch(8)}, ${ch(0)}, ${alpha})`;
   }
 
-  reactToCursor() {
-    // Buddy is fixed at top-left — no cursor-based movement
+  // Midpoint displacement gives sharp, faceted crests
+  static ridge(rand, levels, rough) {
+    const n = 1 << levels;
+    const pts = new Float32Array(n + 1);
+    pts[0] = rand();
+    pts[n] = rand();
+    let step = n, scale = 1;
+    while (step > 1) {
+      const half = step / 2;
+      for (let i = half; i < n; i += step) pts[i] = (pts[i - half] + pts[i + half]) / 2 + (rand() * 2 - 1) * scale;
+      scale *= rough;
+      step = half;
+    }
+    let min = Infinity, max = -Infinity;
+    pts.forEach(v => { min = Math.min(min, v); max = Math.max(max, v); });
+    return Array.from(pts, v => (v - min) / (max - min || 1));
   }
 
-  scheduleNextTeleport() {
-    const p = this.buddy.personality;
-    let min, max;
-    if (p === 'energetic' || p === 'driven') { min = 45000; max = 90000; }
-    else if (p === 'creative') { min = 60000; max = 180000; }
-    else if (p === 'calm' || p === 'methodical' || p === 'nurturing') { min = 120000; max = 240000; }
-    else { min = 240000; max = 480000; } // focused, strategic, analytical, decisive
-    const next = min + Math.random() * (max - min);
-    setTimeout(() => {
-      if (p === 'energetic' || p === 'creative') this.side = this.side === 'left' ? 'right' : 'left';
-      this.teleport();
-      this.scheduleNextTeleport();
-    }, next);
-  }
-
-  teleport() {
-    if (!this.artEl) return;
-    this.lastTeleportAt = Date.now();
-    this.positionOnEdge();
-    this.artEl.removeAttribute('data-effect');
-    void this.artEl.offsetWidth;
-    this.artEl.dataset.effect = this.buddy.effect;
-    setTimeout(() => this.artEl?.removeAttribute('data-effect'), 900);
-  }
-
-  setWorkingState(working) {
-    if (this.isWorking === working || !this.artEl) return;
-    this.isWorking = working;
-
-    if (working) {
-      this.artEl.classList.add('working');
-      clearInterval(this.thoughtTimer);
-      this.fetchThought();
-      const p = this.buddy.personality;
-      const baseInterval = (p === 'energetic' || p === 'driven') ? 4 * 60 * 1000
-                          : (p === 'focused' || p === 'strategic' || p === 'analytical' || p === 'decisive') ? 10 * 60 * 1000
-                          : 6 * 60 * 1000;
-      this.thoughtTimer = setInterval(() => this.fetchThought(), baseInterval);
-    } else {
-      this.artEl.classList.remove('working');
-      clearInterval(this.thoughtTimer);
+  static stars(ctx, rand, w, h, density, band = 0.62) {
+    const count = Math.round((w * h) / 1600 * density);
+    for (let i = 0; i < count; i++) {
+      const x = rand() * w;
+      const y = Math.pow(rand(), 1.4) * h * band;
+      const r = 0.25 + rand() * 0.95;
+      const alpha = (0.2 + rand() * 0.7) * (1 - y / (h * (band + 0.08)));
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, alpha).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
-  async fetchThought() {
-    let pomoStats = 0;
-    try { pomoStats = (JSON.parse(localStorage.getItem(POMO_STATS_KEY)) || {}).cycles || 0; } catch {}
+  static paint(canvas, scene, w, h) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const rand = Scenery.rng(scene.label);
+    if (scene.blackHole) Scenery.paintBlackHole(ctx, rand, w, h);
+    else Scenery.paintRidges(ctx, rand, scene, w, h);
+  }
 
-    let tasksDone = 0, totalTasks = 0;
-    const topTasks = (this.todo?.topOpen(3) || []).join(' | ');
-    try {
-      const subjects = JSON.parse(localStorage.getItem(TODO_KEY)) || [];
-      subjects.forEach(s => { totalTasks += s.tasks.length; tasksDone += s.tasks.filter(t => t.done).length; });
-    } catch {}
+  static paintRidges(ctx, rand, scene, w, h) {
+    const TAU = Math.PI * 2;
+    const [lx, ly, lr, lightRgb] = scene.light;
 
-    const timer = window.appInstance?.pomodoro;
-    const mode = timer ? (timer.currentMode === 'pomodoro' ? 'work' : 'break') : 'work';
+    const sky = ctx.createLinearGradient(0, 0, 0, h * 0.78);
+    sky.addColorStop(0, scene.sky[0]);
+    sky.addColorStop(0.55, scene.sky[1]);
+    sky.addColorStop(1, scene.sky[2]);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
 
-    try {
-      const res = await fetch('/api/companion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: this.buddy.name,
-          personality: this.buddy.personality,
-          mode,
-          stats: `${pomoStats} pomodoros done, ${tasksDone}/${totalTasks} tasks complete`,
-          topTasks
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.response) this.say(data.response);
+    Scenery.stars(ctx, rand, w, h, scene.stars);
+
+    // Moon or low sun
+    const cx = lx * w, cy = ly * h, radius = Math.max(1.5, lr * Math.min(w, h));
+    const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 7);
+    halo.addColorStop(0, `rgba(${lightRgb}, 0.32)`);
+    halo.addColorStop(1, `rgba(${lightRgb}, 0)`);
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = `rgba(${lightRgb}, 0.92)`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, TAU);
+    ctx.fill();
+
+    // Ridges, far to near, with fog between them
+    const LAYERS = 6;
+    for (let i = 0; i < LAYERS; i++) {
+      const t = i / (LAYERS - 1);
+      const base = h * (0.56 + 0.36 * t);
+      const amp = h * (0.2 - 0.1 * t);
+      const pts = Scenery.ridge(rand, 5 + Math.round(t * 2), scene.rough);
+      const color = Scenery.mix(scene.haze, scene.near, Math.pow(t, 0.7));
+      const yAt = k => base - pts[k] * amp;
+      const xAt = k => (k / (pts.length - 1)) * w;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      pts.forEach((_, k) => ctx.lineTo(xAt(k), yAt(k)));
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Faint rim light along the crest
+      ctx.beginPath();
+      pts.forEach((_, k) => (k ? ctx.lineTo(xAt(k), yAt(k)) : ctx.moveTo(xAt(k), yAt(k))));
+      ctx.strokeStyle = `rgba(${lightRgb}, ${(0.05 + 0.1 * (1 - t)).toFixed(3)})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      if (scene.trees && t > 0.3) {
+        ctx.fillStyle = color;
+        for (let x = 0; x < w; x += 3 + rand() * 9) {
+          const pos = (x / w) * (pts.length - 1);
+          const k = Math.floor(pos), f = pos - k;
+          const y = base - (pts[k] + ((pts[k + 1] ?? pts[k]) - pts[k]) * f) * amp;
+          const th = h * (0.02 + rand() * 0.05) * (0.4 + t);
+          ctx.beginPath();
+          ctx.moveTo(x - th * 0.18, y + 2);
+          ctx.lineTo(x, y - th);
+          ctx.lineTo(x + th * 0.18, y + 2);
+          ctx.closePath();
+          ctx.fill();
+        }
       }
-    } catch {}
+
+      if (i < LAYERS - 1) {
+        const top = base - amp * 0.6;
+        const fog = ctx.createLinearGradient(0, top, 0, base + h * 0.05);
+        fog.addColorStop(0, Scenery.mix(scene.haze, scene.haze, 0, 0));
+        fog.addColorStop(1, Scenery.mix(scene.haze, scene.haze, 0, (scene.fog * (1 - t)).toFixed(3)));
+        ctx.fillStyle = fog;
+        ctx.fillRect(0, top, w, h - top);
+      }
+    }
   }
 
-  say(text) {
-    if (!this.speechEl) return;
-    this.lastMessage = text;
-    this.speechEl.textContent = text;
-    this.speechEl.classList.add('show');
-    if (this.hideTimer) clearTimeout(this.hideTimer);
-    this.hideTimer = setTimeout(() => this.speechEl.classList.remove('show'), 12000);
+  // A Gargantua-style black hole: the disk passes behind and in front of the shadow,
+  // and its far side is lensed into a ring over the top
+  static paintBlackHole(ctx, rand, w, h) {
+    const TAU = Math.PI * 2;
+    ctx.fillStyle = '#030305';
+    ctx.fillRect(0, 0, w, h);
+    const glow = ctx.createRadialGradient(w * 0.66, h * 0.38, 0, w * 0.66, h * 0.38, Math.max(w, h) * 0.6);
+    glow.addColorStop(0, 'rgba(90, 50, 30, 0.35)');
+    glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    Scenery.stars(ctx, rand, w, h, 1.4, 1);
+
+    const cx = w * 0.66, cy = h * 0.38, R = Math.min(w, h) * 0.12;
+    const tilt = -0.08;
+    const disk = (from, to) => {
+      for (let k = 0; k < 140; k++) {
+        const t = k / 139;
+        const rx = R * (1.5 + 2.1 * t);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, rx * 0.17, tilt, from, to);
+        ctx.strokeStyle = t < 0.25
+          ? `rgba(255, 244, 222, ${(0.2 * (1 - t)).toFixed(3)})`
+          : `rgba(255, ${Math.round(190 - 90 * t)}, ${Math.round(110 - 80 * t)}, ${(0.15 * Math.pow(1 - t, 1.6)).toFixed(3)})`;
+        ctx.lineWidth = R * 0.05;
+        ctx.stroke();
+      }
+    };
+
+    disk(Math.PI, TAU); // far half, behind the shadow
+    for (let k = 0; k < 70; k++) {
+      const t = k / 69;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * (1.1 + 0.55 * t), Math.PI * 1.02, Math.PI * 1.98);
+      ctx.strokeStyle = `rgba(255, ${Math.round(225 - 90 * t)}, ${Math.round(170 - 110 * t)}, ${(0.13 * Math.pow(1 - t, 1.4)).toFixed(3)})`;
+      ctx.lineWidth = R * 0.045;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 1.04, 0, TAU);
+    ctx.strokeStyle = 'rgba(255, 238, 214, 0.85)';
+    ctx.lineWidth = Math.max(1, R * 0.025);
+    ctx.stroke();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, TAU);
+    ctx.fill();
+    disk(0, Math.PI); // near half, in front of the shadow
   }
 }
 
-class TailscaleOverlay {
-  constructor() {
-    this.overlay = document.getElementById('tailscaleOverlay');
-    this.initEvents();
-  }
+// ── Picture of the day (NASA or Bing, passed through the worker) ─────────────
 
-  initEvents() {
-    document.getElementById('loginPill')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
-    document.getElementById('tsCancel')?.addEventListener('click', () => this.close());
-    document.getElementById('tsConfirm')?.addEventListener('click', () => { window.location.href = CONFIG.portalUrl; });
+const PICTURE_SOURCES = {
+  apod: { name: 'space picture' },
+  bing: { name: 'photo' }
+};
 
-    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
+class Wallpaper {
+  constructor(scenery) {
+    this.scenery = scenery;
+    this.root = document.documentElement;
+    this.prefs = { source: 'apod', preferDark: true, develop: true, dim: 20, pick: null, ...Store.get(WALL_KEY, {}) };
+    if (!PICTURE_SOURCES[this.prefs.source] && this.prefs.source !== 'scene') this.prefs.source = 'apod';
+    this.stats = Store.get(WALL_STATS_KEY, {});
+    this.lists = {}; // recent pictures per source
+    this.current = null;
+    this.gridBuilt = false;
+    this.onChange = null;
+
+    this.els = {
+      sources: document.querySelectorAll('input[name="wallSource"]'),
+      dark: document.getElementById('wallDark'),
+      develop: document.getElementById('wallDevelop'),
+      dim: document.getElementById('wallDim'),
+      dimVal: document.getElementById('wallDimVal'),
+      grid: document.getElementById('wallGrid'),
+      status: document.getElementById('wallStatus'),
+      captionTitle: document.getElementById('captionTitle'),
+      captionText: document.getElementById('captionText'),
+      captionLink: document.getElementById('captionLink')
+    };
+    this.defaultStatus = this.els.status?.textContent || '';
+
+    this.els.sources.forEach(input => input.addEventListener('change', () => {
+      if (!input.checked) return;
+      this.prefs.source = input.value;
+      this.prefs.pick = null;
+      this.savePrefs();
+      this.gridBuilt = false;
+      this.prefs.source === 'scene' ? this.useScene() : this.refresh({ buildGrid: true });
+    }));
+    this.els.dark?.addEventListener('change', () => {
+      this.prefs.preferDark = this.els.dark.checked;
+      this.prefs.pick = null;
+      this.savePrefs();
+      this.refresh();
     });
-  }
-
-  open() { this.overlay?.classList.add('open'); this.overlay?.setAttribute('aria-hidden', 'false'); }
-  close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
-}
-
-class ContactModal {
-  constructor() {
-    this.overlay = document.getElementById('contactOverlay');
-    this.form = document.getElementById('contactForm');
-    this.initEvents();
-  }
-
-  initEvents() {
-    document.getElementById('footerContactLink')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
-    document.getElementById('contactCancel')?.addEventListener('click', () => this.close());
-    document.getElementById('copyEmailBtn')?.addEventListener('click', () => this.copyEmail());
-
-    this.form?.addEventListener('submit', (e) => { e.preventDefault(); this.sendMailto(); });
-
-    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
+    this.els.develop?.addEventListener('change', () => {
+      this.prefs.develop = this.els.develop.checked;
+      this.savePrefs();
+      this.onChange?.();
     });
+    this.els.dim?.addEventListener('input', () => {
+      this.prefs.dim = parseInt(this.els.dim.value, 10);
+      this.savePrefs();
+      this.applyDim();
+      if (this.current && this.stats[this.current.id]) this.applyLook(this.stats[this.current.id]);
+    });
+
+    this.syncControls();
+    this.applyDim();
+    this.updateCaption();
+    if (this.prefs.source === 'scene') this.useScene();
+    else this.refresh();
   }
 
-  open() {
-    this.overlay?.classList.add('open');
-    this.overlay?.setAttribute('aria-hidden', 'false');
-    setTimeout(() => document.getElementById('contactName')?.focus(), 100);
+  get photoOn() {
+    return this.prefs.source !== 'scene';
   }
-  close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
 
-  async copyEmail() {
+  savePrefs() {
+    Store.set(WALL_KEY, this.prefs);
+    this.syncControls();
+  }
+
+  syncControls() {
+    const on = this.photoOn;
+    this.els.sources.forEach(input => { input.checked = input.value === this.prefs.source; });
+    if (this.els.dark) { this.els.dark.checked = this.prefs.preferDark; this.els.dark.disabled = !on; }
+    if (this.els.develop) this.els.develop.checked = this.prefs.develop;
+    if (this.els.dim) { this.els.dim.value = this.prefs.dim; this.els.dim.disabled = !on; }
+    if (this.els.dimVal) this.els.dimVal.textContent = this.prefs.dim;
+    this.scenery.markActive(!on);
+  }
+
+  setStatus(text) {
+    if (this.els.status) this.els.status.textContent = text || this.defaultStatus;
+  }
+
+  applyDim() {
+    this.root.style.setProperty('--dim', (this.prefs.dim / 100).toFixed(2));
+  }
+
+  turnOff() {
+    this.prefs.source = 'scene';
+    this.savePrefs();
+    this.useScene();
+  }
+
+  static valid(img) {
+    const ok = url => typeof url === 'string' && url.startsWith('/api/wallpaper/image?') && !/["\\)\s]/.test(url);
+    return img && typeof img.id === 'string' && img.src && ['thumb', 'sd', 'hd', 'portrait'].every(k => ok(img.src[k]));
+  }
+
+  async load(source) {
+    if (this.lists[source]) return this.lists[source];
+    const res = await fetch(`/api/wallpaper?source=${source}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const images = (data.images || []).filter(Wallpaper.valid);
+    if (!images.length) throw new Error('no pictures');
+    this.lists[source] = images;
+    return images;
+  }
+
+  get images() {
+    return this.lists[this.prefs.source] || [];
+  }
+
+  async refresh({ buildGrid = false } = {}) {
+    const source = this.prefs.source;
+    if (source === 'scene') return;
+    this.setStatus(null);
     try {
-      await navigator.clipboard.writeText(CONFIG.contactEmail);
-      const btn = document.getElementById('copyEmailBtn');
-      if (btn) { const o = btn.textContent; btn.textContent = 'copied ✓'; setTimeout(() => btn.textContent = o, 1500); }
+      await this.load(source);
+      const img = await this.choose();
+      if (this.prefs.source !== source) return;
+      await this.show(img);
+      if (buildGrid) this.renderGrid(true);
     } catch {
-      prompt('Copy this email:', CONFIG.contactEmail);
+      if (this.prefs.source !== source) return;
+      this.useScene();
+      this.setStatus(`Couldn't load today's ${PICTURE_SOURCES[source].name}, so a built-in scene is showing. It tries again each time you open the site.`);
     }
   }
 
-  sendMailto() {
-    const name = document.getElementById('contactName').value.trim();
-    const from = document.getElementById('contactEmail').value.trim();
-    const subject = document.getElementById('contactSubject').value.trim() || 'Hello from 0bsidian';
-    const message = document.getElementById('contactMessage').value.trim();
-    if (!name || !message) return;
-
-    const body = `${message}\n\n— ${name}${from ? `\nReply: ${from}` : ''}`;
-    const url = `mailto:${encodeURIComponent(CONFIG.contactEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = url;
-    setTimeout(() => this.close(), 300);
+  async choose() {
+    const images = this.images;
+    const today = new Date().toDateString();
+    const pick = this.prefs.pick;
+    if (pick && pick.day === today) {
+      const picked = images.find(img => img.id === pick.id);
+      if (picked) return picked;
+    }
+    if (!this.prefs.preferDark) return images[0];
+    let darkest = null;
+    for (const img of images) {
+      const s = await this.analyze(img).catch(() => null);
+      if (!s) continue;
+      if (s.lum < DARK_PHOTO_LUM) return img;
+      if (!darkest || s.lum < this.stats[darkest.id].lum) darkest = img;
+    }
+    return darkest || images[0];
   }
-}
 
-class PrivacyOverlay {
-  constructor() {
-    this.overlay = document.getElementById('privacyOverlay');
-    document.getElementById('footerPrivacyLink')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
-    document.getElementById('privacyClose')?.addEventListener('click', () => this.close());
-    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
+  // Portrait crop on tall screens, full resolution on large ones
+  static pickSrc(img) {
+    if (window.innerHeight > window.innerWidth) return img.src.portrait;
+    const dpr = window.devicePixelRatio || 1;
+    return window.innerWidth * dpr > 1400 ? img.src.hd : img.src.sd;
+  }
+
+  static loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
     });
   }
-  open() { this.overlay?.classList.add('open'); this.overlay?.setAttribute('aria-hidden', 'false'); }
-  close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
-}
 
-class DevMsgOverlay {
-  constructor() {
-    this.overlay = document.getElementById('devMsgOverlay');
-    this.body = document.getElementById('devMsgBody');
-    this.loaded = false;
-    document.getElementById('devMsgClose')?.addEventListener('click', () => this.close());
-    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
-    });
+  async analyze(img) {
+    if (this.stats[img.id]) return this.stats[img.id];
+    const el = await Wallpaper.loadImage(img.src.thumb);
+    const s = Wallpaper.measure(el);
+    this.stats[img.id] = s;
+    const ids = Object.keys(this.stats);
+    if (ids.length > 60) ids.slice(0, ids.length - 60).forEach(k => delete this.stats[k]);
+    Store.set(WALL_STATS_KEY, this.stats);
+    return s;
   }
-  open() {
-    this.overlay?.classList.add('open');
-    this.overlay?.setAttribute('aria-hidden', 'false');
-    if (!this.loaded) this.fetchMessage();
+
+  // Brightness (weighted to the lower left, where the time sits) and the strongest hue
+  static measure(img) {
+    const W = 48, H = 30;
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, W, H);
+    const { data } = ctx.getImageData(0, 0, W, H);
+    const bins = Array.from({ length: 18 }, () => ({ w: 0, r: 0, g: 0, b: 0 }));
+    let lumSum = 0, weightSum = 0, r = 0, g = 0, b = 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        const R = data[i], G = data[i + 1], B = data[i + 2];
+        const w = 0.4 + 0.6 * Math.max(0, 1 - Math.hypot(x / (W - 1) - 0.2, y / (H - 1) - 0.8));
+        lumSum += Wallpaper.luminance([R, G, B]) * w;
+        weightSum += w;
+        r += R; g += G; b += B;
+        const [hue, sat, light] = Wallpaper.rgbToHsl([R, G, B]);
+        if (sat > 0.2 && light > 0.15 && light < 0.85) {
+          const bin = bins[Math.floor(hue * 18) % 18];
+          const bw = sat * sat * (1 - Math.abs(light - 0.5));
+          bin.w += bw; bin.r += R * bw; bin.g += G * bw; bin.b += B * bw;
+        }
+      }
+    }
+    const n = W * H;
+    const best = bins.reduce((a, x) => (x.w > a.w ? x : a));
+    const accent = best.w > n * 0.01 ? Wallpaper.rgbToHsl([best.r / best.w, best.g / best.w, best.b / best.w]) : null;
+    return {
+      lum: +(lumSum / weightSum).toFixed(4),
+      avg: [r / n, g / n, b / n].map(Math.round),
+      accent: accent && accent.map(v => +v.toFixed(3))
+    };
   }
-  close() {
-    this.overlay?.classList.remove('open');
-    this.overlay?.setAttribute('aria-hidden', 'true');
+
+  static luminance([r, g, b]) {
+    const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   }
-  async fetchMessage() {
-    if (!this.body) return;
-    this.body.innerHTML = '<p style="color:var(--term-dimmer);font-style:italic;">loading…</p>';
+
+  static contrast(a, b) {
+    const la = Wallpaper.luminance(a), lb = Wallpaper.luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+
+  static rgbToHsl([r, g, b]) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    if (max === min) return [0, 0, l];
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h;
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return [h / 6, s, l];
+  }
+
+  static hslToRgb([h, s, l]) {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const hue = t => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    return [hue(h + 1 / 3), hue(h), hue(h - 1 / 3)].map(v => Math.round(v * 255));
+  }
+
+  static hex(rgb) {
+    return `#${rgb.map(v => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  // An accent from the picture's hue, lightened or darkened until it reads on the tone
+  static accentFor(hsl, tone) {
+    const h = hsl ? hsl[0] : 0.12;
+    const s = hsl ? Math.min(0.85, Math.max(0.45, hsl[1])) : 0.8;
+    if (tone === 'dark') {
+      const ink = Wallpaper.hslToRgb([h, Math.min(s, 0.5), 0.1]);
+      let l = 0.72;
+      let accent = Wallpaper.hslToRgb([h, s, l]);
+      while (Wallpaper.contrast(accent, ink) < 7 && l < 0.9) {
+        l += 0.02;
+        accent = Wallpaper.hslToRgb([h, s, l]);
+      }
+      return { accent: Wallpaper.hex(accent), ink: Wallpaper.hex(ink) };
+    }
+    let l = 0.45;
+    let accent = Wallpaper.hslToRgb([h, s, l]);
+    while (Wallpaper.contrast(accent, [255, 255, 255]) < 4.6 && l > 0.2) {
+      l -= 0.02;
+      accent = Wallpaper.hslToRgb([h, s, l]);
+    }
+    return { accent: Wallpaper.hex(accent), ink: '#ffffff' };
+  }
+
+  applyLook(s) {
+    const tone = s.lum * (1 - this.prefs.dim / 100) > LIGHT_UI_LUM ? 'light' : 'dark';
+    const { accent, ink } = Wallpaper.accentFor(s.accent, tone);
+    const toward = tone === 'dark' ? [0, 0, 0] : [255, 255, 255];
+    const bg = Wallpaper.hex(s.avg.map((v, i) => v + (toward[i] - v) * 0.7));
+    this.root.dataset.tone = tone;
+    this.root.style.setProperty('--accent', accent);
+    this.root.style.setProperty('--accent-ink', ink);
+    this.root.style.setProperty('--bg', bg);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg);
+    this.onChange?.();
+    return { tone, accent, ink, bg };
+  }
+
+  async show(img) {
+    const source = this.prefs.source;
+    const stats = await this.analyze(img);
+    let src = Wallpaper.pickSrc(img);
     try {
-      const res = await fetch('https://raw.githubusercontent.com/0bsidian-bit/landing-page/main/message.md');
-      if (!res.ok) throw new Error(`${res.status}`);
-      const md = await res.text();
-      this.body.innerHTML = this.parseMarkdown(md);
-      this.loaded = true;
-    } catch (err) {
-      this.body.innerHTML = '<p style="color:var(--term-dimmer);">could not load message. check back later.</p>';
+      await Wallpaper.loadImage(src);
+    } catch {
+      if (src === img.src.sd) throw new Error('picture failed');
+      src = img.src.sd;
+      await Wallpaper.loadImage(src);
+    }
+    if (this.prefs.source !== source) return;
+    this.current = img;
+    this.root.style.setProperty('--wall', `url("${src}")`);
+    this.root.dataset.wall = 'on';
+    const look = this.applyLook(stats);
+    Store.set(LOOK_KEY, { ...look, wall: src, dim: this.prefs.dim });
+    this.scenery.markActive(false);
+    this.updateCaption();
+    this.renderGrid();
+  }
+
+  useScene() {
+    this.current = null;
+    this.root.dataset.wall = 'off';
+    this.root.dataset.tone = 'dark';
+    ['--accent', '--accent-ink', '--bg', '--wall'].forEach(p => this.root.style.removeProperty(p));
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', this.scenery.scene.theme);
+    Store.remove(LOOK_KEY);
+    this.scenery.markActive(true);
+    this.updateCaption();
+    this.renderGrid();
+    this.onChange?.();
+  }
+
+  // The museum label in the corner: the picture's title, caption and credit, or the scene's
+  updateCaption() {
+    const { captionTitle, captionText, captionLink } = this.els;
+    const img = this.current;
+    if (captionTitle) captionTitle.textContent = img ? (img.title || 'Picture of the day') : this.scenery.scene.label;
+    if (captionText) {
+      captionText.textContent = img
+        ? [img.caption, img.credit].filter(Boolean).join(' ')
+        : `${this.scenery.scene.caption} Painted in your browser.`;
+    }
+    if (captionLink) {
+      captionLink.hidden = !img?.link;
+      if (img?.link) captionLink.href = img.link;
     }
   }
-  parseMarkdown(md) {
-    return md
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/^## (.+)$/gm, '<h3 style="margin:1em 0 .3em;font-size:1em;color:var(--accent)">$1</h3>')
-      .replace(/^# (.+)$/gm, '<h2 style="margin:1em 0 .3em;font-size:1.1em;color:var(--accent)">$1</h2>')
-      .replace(/^---$/gm, '<hr style="border-color:var(--term-divider);margin:1em 0">')
-      .split(/\n\n+/)
-      .map(block => block.startsWith('<') ? block : `<p>${block.replace(/\n/g, '<br>')}</p>`)
-      .join('\n');
-  }
-}
 
-class BreakTagModal {
-  constructor() {
-    this.overlay = document.getElementById('breakTagOverlay');
-    this.tagGrid = document.getElementById('breakTagGrid');
-    this.durationText = document.getElementById('breakDurationText');
-    this._resolve = null;
-    this.tags = this._loadTags();
-    this._renderTags();
-    document.getElementById('breakTagSkip')?.addEventListener('click', () => this._pick(null));
-    document.getElementById('breakTagEdit')?.addEventListener('click', () => this._editTags());
-    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this._pick(null); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this._pick(null);
-    });
+  static dayLabel(yyyymmdd) {
+    const m = /^(\d{4})(\d{2})(\d{2})$/.exec(yyyymmdd || '');
+    if (!m) return '';
+    const d = new Date(+m[1], +m[2] - 1, +m[3]);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'today';
+    if (d.toDateString() === yesterday.toDateString()) return 'yesterday';
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 
-  _loadTags() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(BREAK_TAGS_KEY));
-      if (Array.isArray(saved) && saved.length >= 2) return saved;
-    } catch {}
-    return ['meals', 'bathroom', 'rest', 'other'];
-  }
-
-  _saveTags() {
-    try { localStorage.setItem(BREAK_TAGS_KEY, JSON.stringify(this.tags)); } catch {}
-  }
-
-  _renderTags() {
-    if (!this.tagGrid) return;
-    this.tagGrid.replaceChildren();
-    this.tags.forEach(tag => {
-      const btn = document.createElement('button');
-      btn.className = 'break-tag-btn pop-btn';
-      btn.textContent = '#' + tag;
-      btn.addEventListener('click', () => this._pick(tag));
-      this.tagGrid.appendChild(btn);
-    });
-  }
-
-  show(breakDurationSecs) {
-    return new Promise(resolve => {
-      this._resolve = resolve;
-      const h = Math.floor(breakDurationSecs / 3600);
-      const m = Math.floor((breakDurationSecs % 3600) / 60);
-      const s = breakDurationSecs % 60;
-      const parts = [];
-      if (h) parts.push(`${h}h`);
-      if (m) parts.push(`${m}m`);
-      if (s || !parts.length) parts.push(`${s}s`);
-      if (this.durationText) this.durationText.textContent = 'break for ' + parts.join(' ');
-      this.overlay?.classList.add('open');
-      this.overlay?.setAttribute('aria-hidden', 'false');
-    });
-  }
-
-  _pick(tag) {
-    this.overlay?.classList.remove('open');
-    this.overlay?.setAttribute('aria-hidden', 'true');
-    if (this._resolve) { this._resolve(tag); this._resolve = null; }
-  }
-
-  async _editTags() {
-    const newTags = [];
-    for (let i = 0; i < this.tags.length; i++) {
-      const val = prompt(`rename #${this.tags[i]}:`, this.tags[i]);
-      newTags.push((val || this.tags[i]).trim().replace(/\s+/g, '-').toLowerCase().slice(0, 20));
+  // Thumbnails of recent pictures; built the first time the sheet opens
+  renderGrid(build = false) {
+    const grid = this.els.grid;
+    if (!grid) return;
+    if (!this.photoOn || !this.images.length) {
+      grid.replaceChildren();
+      this.gridBuilt = false;
+      return;
     }
-    this.tags = newTags;
-    this._saveTags();
-    this._renderTags();
-  }
-}
-
-class SubjectSelectModal {
-  constructor(todoManager) {
-    this.todo = todoManager;
-    this.overlay = document.getElementById('subjectSelectOverlay');
-    this.list = document.getElementById('subjectSelectList');
-    this._resolve = null;
-    document.getElementById('subjectSelectSkip')?.addEventListener('click', () => this._pick(null));
-    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this._pick(null); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this._pick(null);
-    });
-  }
-
-  show() {
-    return new Promise(resolve => {
-      this._resolve = resolve;
-      if (!this.list) { resolve(null); return; }
-      const subjects = this.todo?.subjects || [];
-      if (subjects.length === 0) { resolve(null); return; }
-      this.list.replaceChildren();
-      subjects.forEach(subj => {
+    if (!this.gridBuilt && build) {
+      // An even count, so the two-column grid never ends on a lone thumbnail
+      const shown = this.images.length > 1 ? this.images.slice(0, this.images.length - (this.images.length % 2)) : this.images;
+      grid.replaceChildren(...shown.map(img => {
         const btn = document.createElement('button');
-        btn.className = 'subject-select-btn pop-btn';
-        const dot = document.createElement('span');
-        dot.className = 'subject-select-dot';
-        dot.style.backgroundColor = subj.color;
-        btn.appendChild(dot);
-        btn.appendChild(document.createTextNode(subj.subject));
-        btn.addEventListener('click', () => this._pick(subj.subject));
-        this.list.appendChild(btn);
-      });
-      this.overlay?.classList.add('open');
-      this.overlay?.setAttribute('aria-hidden', 'false');
+        btn.className = 'thumb';
+        btn.dataset.id = img.id;
+        btn.title = img.title || '';
+        const pic = document.createElement('img');
+        pic.src = img.src.thumb;
+        pic.alt = '';
+        pic.loading = 'lazy';
+        const label = document.createElement('span');
+        label.textContent = Wallpaper.dayLabel(img.date) || img.title || 'picture';
+        btn.append(pic, label);
+        btn.addEventListener('click', () => {
+          this.prefs.pick = { id: img.id, day: new Date().toDateString() };
+          this.savePrefs();
+          this.setStatus(null);
+          this.show(img).catch(() => this.setStatus('That picture didn\'t load. Try another one.'));
+        });
+        return btn;
+      }));
+      this.gridBuilt = true;
+    }
+    grid.querySelectorAll('.thumb').forEach(btn => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.id === this.current?.id));
     });
-  }
-
-  _pick(name) {
-    this.overlay?.classList.remove('open');
-    this.overlay?.setAttribute('aria-hidden', 'true');
-    if (this._resolve) { this._resolve(name); this._resolve = null; }
   }
 }
 
-class DevContactOverlay {
-  constructor(contactModal) {
-    this.overlay = document.getElementById('devContactOverlay');
-    this.contactModal = contactModal;
-    document.getElementById('footerDevName')?.addEventListener('click', (e) => { e.preventDefault(); this.open(); });
-    document.getElementById('devContactGetInTouch')?.addEventListener('click', () => {
+// ── Sheets and modals ────────────────────────────────────────────────────────
+
+class Sheet {
+  static all = [];
+
+  constructor(panelId, triggerIds, { onOpen } = {}) {
+    this.panel = document.getElementById(panelId);
+    this.triggers = triggerIds.map(id => document.getElementById(id)).filter(Boolean);
+    this.onOpen = onOpen;
+    if (!this.panel) return;
+    Sheet.all.push(this);
+
+    this.triggers.forEach(t => t.addEventListener('click', () => this.toggle()));
+    this.panel.querySelector('[data-close]')?.addEventListener('click', () => this.close());
+
+    // composedPath survives re-renders that detach the clicked node
+    document.addEventListener('click', e => {
+      if (!this.isOpen) return;
+      const path = e.composedPath();
+      if (path.includes(this.panel) || this.triggers.some(t => path.includes(t))) return;
+      if (path.some(el => el.classList?.contains('overlay'))) return;
       this.close();
-      this.contactModal?.open();
     });
-    document.getElementById('devContactGithub')?.addEventListener('click', () => {
-      window.open('https://github.com/0bsidian-bit', '_blank', 'noopener');
-    });
-    this.overlay?.addEventListener('click', e => { if (e.target === this.overlay) this.close(); });
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && this.overlay?.classList.contains('open')) this.close();
+      if (e.key === 'Escape' && this.isOpen && !document.querySelector('.overlay.open')) this.close();
     });
+    this.close();
   }
-  open() { this.overlay?.classList.add('open'); this.overlay?.setAttribute('aria-hidden', 'false'); }
-  close() { this.overlay?.classList.remove('open'); this.overlay?.setAttribute('aria-hidden', 'true'); }
+
+  get isOpen() { return this.panel?.classList.contains('open'); }
+
+  open() {
+    Sheet.all.forEach(s => { if (s !== this) s.close(); });
+    this.panel.classList.add('open');
+    this.panel.inert = false;
+    this.triggers.forEach(t => t.setAttribute('aria-expanded', 'true'));
+    this.onOpen?.();
+  }
+
+  close() {
+    if (!this.panel) return;
+    this.panel.classList.remove('open');
+    this.panel.inert = true;
+    this.triggers.forEach(t => t.setAttribute('aria-expanded', 'false'));
+  }
+
+  toggle() { this.isOpen ? this.close() : this.open(); }
 }
 
-class InstallHint {
-  constructor() {
-    this.btn = document.getElementById('installHint');
-    if (this.btn) this.btn.innerHTML = ICONS.install;
-    this.deferred = null;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      this.deferred = e;
-      if (this.btn) this.btn.hidden = false;
+class Modal {
+  constructor(id, { openers = [] } = {}) {
+    this.el = document.getElementById(id);
+    if (!this.el) return;
+    this.el.inert = true;
+    this.el.addEventListener('click', e => { if (e.target === this.el) this.close(); });
+    this.el.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => this.close()));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.isOpen) this.close(); });
+    openers.forEach(openerId => {
+      document.getElementById(openerId)?.addEventListener('click', e => { e.preventDefault(); this.open(); });
     });
-    this.btn?.addEventListener('click', async () => {
-      if (!this.deferred) { this.btn.hidden = true; return; }
-      this.deferred.prompt();
-      await this.deferred.userChoice;
-      this.deferred = null;
-      this.btn.hidden = true;
-    });
-    window.addEventListener('appinstalled', () => { if (this.btn) this.btn.hidden = true; });
+  }
+
+  get isOpen() { return this.el?.classList.contains('open'); }
+
+  open() {
+    this.returnFocus = document.activeElement;
+    this.el.inert = false;
+    this.el.classList.add('open');
+    this.el.setAttribute('aria-hidden', 'false');
+    setTimeout(() => this.el.querySelector('.panel-actions .btn--primary')?.focus(), 50);
+  }
+
+  close() {
+    this.el.classList.remove('open');
+    this.el.setAttribute('aria-hidden', 'true');
+    this.el.inert = true;
+    this.returnFocus?.focus?.();
   }
 }
 
-class TerminalApp {
+// ── The browser tab's icon becomes a progress ring while a timer runs ────────
+
+class TabIcon {
   constructor() {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    this.chatClient = new ChatClient();
-    this.ui = new ChatUI();
-    this.todo = new TodoManager();
-    this.pomodoro = new PomodoroTimer();
-    this.pomodoro.todo = this.todo;
-    this.tailscale = new TailscaleOverlay();
-    this.companion = new StudyCompanion(this.todo);
-    this.contact = new ContactModal();
-    this.privacy = new PrivacyOverlay();
-    this.devMsg = new DevMsgOverlay();
-    this.install = new InstallHint();
-    this.breakTagModal = new BreakTagModal();
-    this.subjectSelectModal = new SubjectSelectModal(this.todo);
-    this.devContact = new DevContactOverlay(this.contact);
-
-    this.ui.setAppInstance(this);
-
-    // Session log: render on load and wire up clear button
-    SessionLog.render();
-    document.getElementById('sessionLogClear')?.addEventListener('click', () => SessionLog.clear());
-
-    if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', () => this.boot());
-    else this.boot();
+    this.link = document.querySelector('link[rel="icon"]');
+    this.baseHref = this.link?.getAttribute('href');
+    this.baseType = this.link?.getAttribute('type');
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = 64;
+    this.canvas.height = 64;
+    this.key = null;
   }
 
-  boot() {
-    window.appInstance = this;
-    window.scrollTo(0, 0);
+  render(timer) {
+    if (!this.link) return;
+    if (!timer.running) {
+      if (this.key !== null) {
+        this.link.setAttribute('type', this.baseType);
+        this.link.setAttribute('href', this.baseHref);
+        this.key = null;
+      }
+      return;
+    }
+    const left = timer.timeLeft / timer.length(timer.mode);
+    const rest = timer.mode !== 'pomodoro';
+    const key = `${Math.round(left * 60)}:${rest}`;
+    if (key === this.key) return;
+    this.key = key;
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#f2c94c';
+    const ctx = this.canvas.getContext('2d');
+    ctx.clearRect(0, 0, 64, 64);
+    ctx.fillStyle = '#0e0e11';
+    ctx.beginPath();
+    ctx.arc(32, 32, 31, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.beginPath();
+    ctx.arc(32, 32, 22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = rest ? '#d7d9de' : accent;
+    ctx.beginPath();
+    ctx.arc(32, 32, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * left);
+    ctx.stroke();
+    this.link.setAttribute('type', 'image/png');
+    this.link.setAttribute('href', this.canvas.toDataURL('image/png'));
+  }
+}
 
-    this.turnstileToken = null;
-    this.turnstileWidgetId = null;
+// ── Pop-out mini timer (Document Picture-in-Picture, Chromium browsers) ──────
 
-    this.animateHeroSubtitle();
-    this.startHeartbeat();
-    this.startStudyingCounter();
-    this.setupTabs();
-    this.setupChatScroll();
+class PopOut {
+  constructor(app) {
+    this.app = app;
+    this.win = null;
+    this.btn = document.getElementById('popoutBtn');
+    if (!PopOut.supported || !this.btn) return;
+    this.btn.hidden = false;
+    this.btn.addEventListener('click', () => this.toggle());
+  }
+
+  static get supported() {
+    return 'documentPictureInPicture' in window;
+  }
+
+  async toggle() {
+    if (!PopOut.supported) return;
+    if (this.win) {
+      this.win.close();
+      return;
+    }
+    try {
+      const win = await window.documentPictureInPicture.requestWindow({ width: 300, height: 180 });
+      const doc = win.document;
+      const css = doc.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = document.querySelector('link[rel="stylesheet"]').href;
+      doc.head.append(css);
+      doc.title = '0bsidian';
+      doc.body.style.margin = '0';
+
+      const wrap = doc.createElement('div');
+      wrap.className = 'pip';
+      this.label = doc.createElement('p');
+      this.label.className = 'phase-line';
+      this.digits = doc.createElement('div');
+      this.digits.className = 'timer-digits';
+      this.button = doc.createElement('button');
+      this.button.className = 'start';
+      this.button.addEventListener('click', () => this.app.timer.toggle());
+      wrap.append(this.label, this.digits, this.button);
+      doc.body.append(wrap);
+
+      this.win = win;
+      this.btn.classList.add('is-on');
+      win.addEventListener('pagehide', () => {
+        this.win = null;
+        this.btn.classList.remove('is-on');
+      });
+      this.render();
+    } catch {}
+  }
+
+  render() {
+    if (!this.win) return;
+    const root = this.win.document.documentElement;
+    const main = document.documentElement;
+    root.dataset.tone = main.dataset.tone;
+    root.dataset.scene = main.dataset.scene;
+    root.style.cssText = main.style.cssText;
+    const timer = this.app.timer;
+    this.label.textContent = timer.mode === 'pomodoro' ? timer.phaseLabel() : MODES[timer.mode].label;
+    DOMUtils.setDigits(this.digits, timer.clockText());
+    this.button.textContent = timer.startLabel();
+  }
+}
+
+// ── App ──────────────────────────────────────────────────────────────────────
+
+class App {
+  constructor() {
+    window.app = this;
+    LEGACY_KEYS.forEach(k => Store.remove(k));
+    const confirmOverlay = document.getElementById('confirmOverlay');
+    if (confirmOverlay) confirmOverlay.inert = true;
+
+    this.tabIcon = new TabIcon();
+    this.scenery = new Scenery();
+    this.wallpaper = new Wallpaper(this.scenery);
+    this.scenery.onPick = () => this.wallpaper.turnOff();
+    this.tasks = new Tasks(this);
+    this.timer = new Timer(this);
+    this.ambience = new Ambience(this);
+    this.popout = new PopOut(this);
+    this.wallpaper.onChange = () => { this.timer.updateDevelop(); this.popout.render(); };
+    this.tasks.render();
+
+    const canHover = window.matchMedia('(hover: hover)').matches;
+    this.sheets = {
+      tasks: new Sheet('tasksSheet', ['tasksBtn', 'phaseTask'], {
+        onOpen: () => { if (canHover) setTimeout(() => document.getElementById('taskInput')?.focus(), 200); }
+      }),
+      sounds: new Sheet('soundsSheet', ['soundsBtn']),
+      today: new Sheet('todaySheet', ['statsBtn'], { onOpen: () => History.render() }),
+      photo: new Sheet('photoSheet', ['backgroundBtn'], {
+        onOpen: () => {
+          this.scenery.renderSwatches();
+          this.wallpaper.renderGrid(true);
+        }
+      }),
+      settings: new Sheet('settingsSheet', ['settingsBtn'])
+    };
+    this.about = new Modal('aboutOverlay', { openers: ['aboutLink'] });
+
+    History.render();
+    Quotes.show();
+    this.onTimerChange();
+
+    document.getElementById('historyClearBtn')?.addEventListener('click', async () => {
+      if (History.load().length === 0) return;
+      if (await siteConfirm('Clear all history? This also resets your streak.')) History.clear();
+    });
+    document.getElementById('copyEmailBtn')?.addEventListener('click', (e) => this.copyEmail(e.currentTarget));
+
+    this.zenBtn = document.getElementById('zenBtn');
+    this.zenBtn?.addEventListener('click', () => this.toggleZen());
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && this.isZen) this.toggleZen(false);
+    });
+    this.renderZen();
+
+    this.setupShortcuts();
     this.registerServiceWorker();
 
-    // Warn before closing if timer is active
-    window.addEventListener('beforeunload', (e) => {
-      const pomo = window.appInstance?.pomodoro;
-      if (pomo?.isRunning || (pomo?.focusPhase && pomo.focusPhase !== 'idle')) {
+    // Browsers only allow sound after an interaction, so wake audio on the first one
+    const unlock = () => AudioHub.get();
+    document.addEventListener('pointerdown', unlock, { once: true });
+    document.addEventListener('keydown', unlock, { once: true });
+
+    // The day may have rolled over while the tab was in the background
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        History.render();
+        this.tasks.renderSummary();
+      }
+    });
+  }
+
+  onTimerChange() {
+    this.ambience?.sync();
+    this.popout?.render();
+  }
+
+  // A short note at the top of the screen; lead is set in italic display type
+  toast(lead, text) {
+    const zone = document.getElementById('toastZone');
+    if (!zone) return;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    const em = document.createElement('em');
+    em.textContent = lead;
+    el.append(em, document.createTextNode(` ${text}`));
+    zone.append(el);
+    while (zone.children.length > 3) zone.firstElementChild.remove();
+    setTimeout(() => {
+      el.classList.add('is-leaving');
+      setTimeout(() => el.remove(), 450);
+    }, 5000);
+  }
+
+  get isZen() {
+    return document.getElementById('app')?.classList.contains('zen');
+  }
+
+  toggleZen(force) {
+    const on = typeof force === 'boolean' ? force : !this.isZen;
+    document.getElementById('app')?.classList.toggle('zen', on);
+    if (on) document.documentElement.requestFullscreen?.().catch(() => {});
+    else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    this.renderZen();
+  }
+
+  renderZen() {
+    if (!this.zenBtn) return;
+    const on = this.isZen;
+    this.zenBtn.innerHTML = on ? ICONS.collapse : ICONS.expand;
+    const label = on ? 'Leave zen mode (F)' : 'Zen mode (F)';
+    this.zenBtn.title = label;
+    this.zenBtn.setAttribute('aria-label', label);
+  }
+
+  async copyEmail(btn) {
+    const email = document.getElementById('emailAddress')?.textContent.trim();
+    if (!email) return;
+    try {
+      await navigator.clipboard.writeText(email);
+      const label = btn.textContent;
+      btn.textContent = 'copied';
+      setTimeout(() => { btn.textContent = label; }, 1500);
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById('emailAddress'));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
+
+  // System notification, only when the tab isn't visible
+  notify(title, body) {
+    if (!this.timer?.settings.notify || !document.hidden) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const options = { body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag: '0bsidian-timer' };
+    if (navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options)).catch(() => {});
+    } else {
+      try { new Notification(title, options); } catch {}
+    }
+  }
+
+  setupShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+      if (document.querySelector('.overlay.open')) return;
+      const key = e.key.toLowerCase();
+      if (e.code === 'Space') {
+        if (e.target.closest?.('button, a')) return; // let the focused control handle it
         e.preventDefault();
-        e.returnValue = '';
+        this.timer.toggle();
+      } else if (key === 'r') {
+        this.timer.confirmReset();
+      } else if (key === 's') {
+        this.timer.skip();
+      } else if (key === 't') {
+        this.sheets.tasks.toggle();
+      } else if (key === 'f') {
+        this.toggleZen();
+      } else if (key === 'p') {
+        this.popout.toggle();
       }
     });
   }
@@ -1776,192 +2193,7 @@ class TerminalApp {
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
-
-  setupTabs() {
-    const tabs = document.querySelectorAll('.dash-tab');
-    const studyPane = document.getElementById('dashStudyPane');
-    const terminalPane = document.getElementById('dashTerminalPane');
-    const whatsNewPane = document.getElementById('dashWhatsNewPane');
-    if (!tabs.length || !studyPane || !terminalPane) return;
-
-    let terminalReady = false;
-    let whatsNewLoaded = false;
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        const target = tab.dataset.tab;
-        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === target));
-        studyPane.classList.toggle('dash-pane--hidden', target !== 'study');
-        terminalPane.classList.toggle('dash-pane--hidden', target !== 'terminal');
-        if (whatsNewPane) whatsNewPane.classList.toggle('dash-pane--hidden', target !== 'whats-new');
-
-        // Contextual settings: only visible on study tab
-        const pomodoroCard = document.getElementById('pomodoroCard');
-        if (pomodoroCard) pomodoroCard.classList.toggle('settings-hidden', target !== 'study');
-
-        if (target === 'terminal') {
-          if (!terminalReady) {
-            terminalReady = true;
-            this.setupTurnstile();
-            const turns = this.chatClient.getTurns();
-            if (turns > 0) {
-              this.ui.appendSystemMessage(`${turns} exchange${turns !== 1 ? 's' : ''} in memory`);
-            }
-          }
-          this.ui.renderSidebar();
-          setTimeout(() => this.ui.input?.focus(), 150);
-        }
-
-        if (target === 'whats-new' && !whatsNewLoaded) {
-          whatsNewLoaded = true;
-          this.loadWhatsNew();
-        }
-      });
-    });
-  }
-
-  loadWhatsNew() {
-    const container = document.getElementById('whatsNewContent');
-    if (!container) return;
-    fetch('/updates.md')
-      .then(r => r.ok ? r.text() : Promise.reject(r.status))
-      .then(md => { container.innerHTML = this._renderMarkdown(md); })
-      .catch(err => {
-        container.innerHTML = `<p class="whats-new-loading">could not load updates (${err}).</p>`;
-      });
-  }
-
-  _renderMarkdown(md) {
-    return md
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      .replace(/^---$/gm, '<hr>')
-      .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
-      .split(/\n\n+/)
-      .map(block => block.startsWith('<') ? block : `<p>${block.replace(/\n/g, '<br>')}</p>`)
-      .join('\n');
-  }
-
-  switchToTab(tab) {
-    const tabBtn = document.querySelector(`.dash-tab[data-tab="${tab}"]`);
-    if (tabBtn) tabBtn.click();
-  }
-
-  setupChatScroll() {
-    const btn = document.getElementById('chatScrollBtn');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      this.switchToTab('terminal');
-      const dashLayout = document.getElementById('dashboardLayout');
-      if (dashLayout) dashLayout.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-
-  setupTurnstile() {
-    const wrap = document.getElementById('chatTurnstileWrap');
-    const widget = document.getElementById('chatTurnstileWidget');
-    if (!wrap || !widget) return;
-
-    this.ui.lockInput();
-
-    const renderWidget = () => {
-      this.turnstileWidgetId = turnstile.render('#chatTurnstileWidget', {
-        sitekey: '0x4AAAAAAC88Z7mu7qgdM_2h',
-        theme: 'dark',
-        callback: (token) => {
-          this.turnstileToken = token;
-          wrap.classList.add('verified');
-          this.ui.unlockInput();
-          this.ui.appendSystemMessage('✓ verified — start chatting');
-        },
-        'error-callback': () => {
-          this.ui.appendSystemMessage('verification failed — refresh to try again');
-        }
-      });
-    };
-
-    if (typeof turnstile !== 'undefined') {
-      renderWidget();
-    } else {
-      let attempts = 0;
-      const poll = setInterval(() => {
-        attempts++;
-        if (typeof turnstile !== 'undefined') { clearInterval(poll); renderWidget(); }
-        else if (attempts >= 20) {
-          clearInterval(poll);
-          wrap.classList.add('verified');
-          this.ui.unlockInput();
-        }
-      }, 500);
-    }
-  }
-
-  startHeartbeat() {
-    const beat = () => fetch('/api/heartbeat', { method: 'POST' }).catch(() => {});
-    beat();
-    setInterval(beat, 60000);
-  }
-
-  startStudyingCounter() {
-    const el = document.getElementById('studyingCount');
-    if (!el) return;
-    const poll = async () => {
-      try {
-        const res = await fetch('/api/studying');
-        if (res.ok) {
-          const data = await res.json();
-          el.textContent = (typeof data.count === 'number') ? Math.max(1, data.count) : '—';
-        } else {
-          el.textContent = '—';
-        }
-      } catch {
-        el.textContent = '—';
-      }
-    };
-    poll();
-    setInterval(poll, 15000);
-  }
-
-  animateHeroSubtitle() {
-    const el = document.getElementById('hero-subtitle');
-    if (!el) return;
-    setTimeout(() => {
-      let i = 0;
-      const interval = setInterval(() => {
-        el.textContent = CONFIG.subtitleText.slice(0, ++i);
-        if (i >= CONFIG.subtitleText.length) clearInterval(interval);
-      }, CONFIG.typingSpeedMs);
-    }, CONFIG.typingDelayMs);
-  }
-
-  async handleAIQuery(query) {
-    if (!query || this.chatClient.isLoading) return;
-
-    this.ui.lockInput();
-    this.chatClient.pushUserMessage(query);
-    this.ui.appendUserMessage(query);
-
-    const spinner = this.ui.showTypingIndicator();
-
-    try {
-      const response = await this.chatClient.ask();
-      spinner.remove();
-      this.ui.appendAIMessage(response);
-      this.chatClient.pushAssistantMessage(response);
-    } catch (err) {
-      spinner.remove();
-      this.chatClient.popLastMessage();
-      this.ui.appendSystemMessage(`error: ${err.message}`);
-    } finally {
-      this.ui.unlockInput();
-      this.ui.scrollDown();
-    }
-  }
 }
 
-new TerminalApp();
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => new App());
+else new App();
