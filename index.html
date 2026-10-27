@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>0bsidian</title>
-<meta name="description" content="A pomodoro timer set on a new space picture every day. The picture resolves from grey to full colour as you focus. Tasks, focus sounds and streaks, no sign-up.">
+<meta name="description" content="A homepage and pomodoro timer set on a new space picture every day. Search the web, keep your shortcuts, and focus while the picture resolves from grey to full colour.">
 <link rel="canonical" href="https://lokeshtewari.uk">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://lokeshtewari.uk">
@@ -23,9 +23,9 @@
 <meta name="apple-mobile-web-app-title" content="0bsidian">
 <link rel="preload" href="/fonts/bodoni-moda.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=17">
+<link rel="stylesheet" href="/styles.css?v=19">
 <script src="/boot.js?v=1"></script>
-<script src="/app.js?v=9" defer></script>
+<script src="/app.js?v=11" defer></script>
 </head>
 <body>
   <!-- The picture is drawn twice: a soft grey print underneath and the sharp colour print on top.
@@ -38,7 +38,7 @@
     <div class="layer backdrop-shade"></div>
   </div>
 
-  <div class="app" id="app">
+  <div class="app view-search" id="app">
 
     <header class="masthead">
       <a class="brand" href="/" aria-label="0bsidian, home">
@@ -47,6 +47,10 @@
         </svg>
         <span class="brand-name">0bsidian</span>
       </a>
+      <div class="views" role="tablist" aria-label="View">
+        <button class="view-tab" role="tab" id="viewSearchTab" data-view="search" aria-selected="true">search</button>
+        <button class="view-tab" role="tab" id="viewFocusTab" data-view="focus" aria-selected="false">focus<span class="view-timer" id="viewTimer" hidden></span></button>
+      </div>
       <nav class="index" aria-label="Tools">
         <button class="index-link" id="tasksBtn" aria-expanded="false" title="Tasks (T)">tasks</button>
         <button class="index-link" id="soundsBtn" aria-expanded="false" title="Focus sounds">sounds</button>
@@ -62,6 +66,32 @@
     </header>
 
     <main class="poster">
+      <section class="home" id="homeView" aria-label="Search">
+        <form class="search" id="searchForm" role="search" autocomplete="off">
+          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+          <input type="search" id="searchInput" placeholder="Search, or type an address" spellcheck="false" enterkeyhint="search" aria-label="Search the web">
+          <label class="engine" title="Search with">
+            <span class="engine-name" id="engineName">Google</span>
+            <select id="searchEngine" aria-label="Search engine"></select>
+          </label>
+          <button type="submit" class="search-go" aria-label="Search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+          </button>
+        </form>
+        <ul class="shortcuts-row" id="shortcutList"></ul>
+        <form class="shortcut-form" id="shortcutForm" hidden autocomplete="off">
+          <input type="text" id="shortcutName" maxlength="24" placeholder="name" aria-label="Shortcut name">
+          <input type="text" id="shortcutUrl" maxlength="300" placeholder="address, e.g. uworld.com" aria-label="Shortcut address" inputmode="url">
+          <button type="submit" class="ctl">save</button>
+          <button type="button" class="ctl" id="shortcutCancel">cancel</button>
+        </form>
+      </section>
+
+      <section class="clock" id="clockView" aria-label="Time and date">
+        <p class="phase-line"><span class="phase-name" id="clockDay">today</span><span class="phase-sep" aria-hidden="true">/</span><span id="clockDate"></span><span class="phase-sep" id="clockSep" aria-hidden="true" hidden>/</span><span id="clockMeridiem" hidden></span></p>
+        <div class="timer-digits" id="clockDigits">00:00</div>
+      </section>
+
       <figure class="quote">
         <blockquote id="quoteText">Live in day-tight compartments.</blockquote>
         <figcaption id="quoteBy">William Osler</figcaption>
@@ -190,7 +220,7 @@
           <input type="range" class="slider" id="wallDim" min="0" max="70" step="5" value="20">
           <span class="field-val"><span id="wallDimVal">20</span>%</span>
         </div>
-        <p class="hint" id="wallStatus">A new picture every day. The page takes its colours, and light or dark text, from it. With "prefer dark" on, a bright day falls back to the newest dark picture from the past few weeks. Space pictures are NASA's public-domain images only.</p>
+        <p class="hint" id="wallStatus">A new picture every day, today's first. The page takes its colours, and light or dark text, from it. Turn on "prefer dark" and a bright day falls back to the newest dark picture instead. If a source doesn't answer, the other one is used.</p>
         <div class="thumb-grid" id="wallGrid"></div>
       </section>
       <section class="group">
@@ -243,6 +273,12 @@
       </section>
 
       <section class="group">
+        <h3 class="label">home</h3>
+        <label class="toggle-row" for="setClock24"><span>24-hour clock</span><input type="checkbox" id="setClock24" class="switch"></label>
+        <label class="toggle-row" for="setNewTab"><span>open searches in a new tab</span><input type="checkbox" id="setNewTab" class="switch"></label>
+      </section>
+
+      <section class="group">
         <h3 class="label">alerts</h3>
         <label class="toggle-row" for="setBell"><span>bell when a timer ends</span><input type="checkbox" id="setBell" data-setting="bell" class="switch"></label>
         <label class="toggle-row" for="setTick"><span>ticking during focus</span><input type="checkbox" id="setTick" data-setting="tick" class="switch"></label>
@@ -253,6 +289,7 @@
       <section class="group">
         <h3 class="label">keyboard</h3>
         <dl class="shortcuts">
+          <div><dt><kbd>/</kbd></dt><dd>search</dd></div>
           <div><dt><kbd>Space</kbd></dt><dd>start or pause</dd></div>
           <div><dt><kbd>R</kbd></dt><dd>reset</dd></div>
           <div><dt><kbd>S</kbd></dt><dd>skip to the next phase</dd></div>
@@ -260,6 +297,7 @@
           <div><dt><kbd>F</kbd></dt><dd>zen mode</dd></div>
           <div><dt><kbd>P</kbd></dt><dd>pop-out mini timer</dd></div>
         </dl>
+        <p class="hint">Letter shortcuts work in the focus view. In the search view, just start typing. Hold Ctrl or ⌘ when you press Enter to search in a new tab.</p>
       </section>
     </div>
   </aside>
@@ -279,9 +317,9 @@
     <div class="panel">
       <h2 class="panel-title" id="aboutTitle">0bsidian</h2>
       <div class="prose">
-        <p>A pomodoro timer set on a new picture every day, from NASA's astronomy archive or Bing. When a focus session starts the picture stays unobserved, grey and out of focus, and it resolves into colour as you work. Finish the session and you see all of it.</p>
+        <p>A homepage and pomodoro timer set on a new picture every day, from NASA's astronomy archive or Bing. Search the web and keep your shortcuts on the search view. Switch to focus and, once a session starts, the picture stays unobserved, grey and out of focus, resolving into colour as you work. Finish the session and you see all of it.</p>
         <h3>privacy</h3>
-        <p>Tasks, settings and history are saved in this browser and nowhere else. There's no sign-up, analytics, ads or cookies. Pictures are fetched by this site's server and passed on to you, so your browser never connects to NASA or Microsoft.</p>
+        <p>Tasks, shortcuts, settings and history are saved in this browser and nowhere else. Searches go straight from your browser to the search engine you pick. There's no sign-up, analytics, ads or cookies. Pictures are fetched by this site's server and passed on to you, so your browser never connects to NASA or Microsoft.</p>
         <h3>made by</h3>
         <p>Dr. Lokesh Tewari. The code is <a href="https://github.com/0bsidian-bit/landing-page" target="_blank" rel="noopener">on GitHub</a>.</p>
       </div>

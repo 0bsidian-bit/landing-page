@@ -36,6 +36,7 @@ const SCENE_KEY = '0bsidian_scene';
 const WALL_KEY = '0bsidian_wallpaper_v1';
 const WALL_STATS_KEY = '0bsidian_wall_stats_v1';
 const LOOK_KEY = '0bsidian_look_v1'; // last picture's look, applied by boot.js before first paint
+const HOME_KEY = '0bsidian_home_v1';
 // Data from the previous version of the site
 const LEGACY_KEYS = [
   'lt-ai-history', 'lt-chat-threads', '0bsidian_pet_id', '0bsidian_pomo_state_v1', '0bsidian_pomo_stats',
@@ -473,6 +474,7 @@ class Timer {
       resetBtn: document.getElementById('resetBtn'),
       skipBtn: document.getElementById('skipBtn'),
       progress: document.getElementById('progressFill'),
+      viewTimer: document.getElementById('viewTimer'),
       notifyHint: document.getElementById('notifyHint')
     };
 
@@ -753,6 +755,10 @@ class Timer {
     const elapsed = Math.max(0, 1 - this.timeLeft / this.length(this.mode));
     if (this.el.progress) this.el.progress.style.width = `${(elapsed * 100).toFixed(2)}%`;
     document.title = this.running ? `(${text}) ${this.baseTitle}` : this.baseTitle;
+    if (this.el.viewTimer) {
+      this.el.viewTimer.hidden = !this.running;
+      this.el.viewTimer.textContent = this.running ? text : '';
+    }
     this.updateDevelop();
     this.app.tabIcon?.render(this);
     this.app.popout?.render();
@@ -1130,8 +1136,8 @@ class History {
 // ── Built-in scenes, painted on a canvas ─────────────────────────────────────
 
 const SCENES = {
-  winden: {
-    label: 'Winden', caption: 'A fog-bound forest at night.', theme: '#0a0e11',
+  forest: {
+    label: 'Night forest', caption: 'Pines in fog under a small moon.', theme: '#0a0e11',
     sky: ['#06090b', '#121c22', '#34444b'], haze: '#52636a', near: '#030506',
     stars: 0.12, rough: 0.38, trees: true, fog: 0.3, light: [0.72, 0.2, 0.028, '214, 222, 226']
   },
@@ -1155,8 +1161,12 @@ class Scenery {
   constructor() {
     this.canvases = [document.getElementById('sceneSharp'), document.getElementById('sceneSoft')].filter(Boolean);
     this.grid = document.getElementById('sceneGrid');
-    const saved = Store.get(SCENE_KEY, 'winden');
-    this.current = SCENES[saved] ? saved : 'winden';
+    let saved = Store.get(SCENE_KEY, 'forest');
+    if (saved === 'winden') { // renamed
+      saved = 'forest';
+      Store.set(SCENE_KEY, saved);
+    }
+    this.current = SCENES[saved] ? saved : 'forest';
     this.swatchesDrawn = false;
     this.lastSize = '';
     this.onPick = null;
@@ -1425,21 +1435,32 @@ class Scenery {
 
 // ── Picture of the day (NASA or Bing, passed through the worker) ─────────────
 
+const PICTURE_FEED_VERSION = 2; // bump when the worker's list format changes, to skip stale caches
 const PICTURE_SOURCES = {
-  apod: { name: 'space picture' },
-  bing: { name: 'photo' }
+  apod: { who: 'NASA', picture: 'NASA\u2019s space picture' },
+  bing: { who: 'Bing', picture: 'Bing\u2019s photo' }
 };
 
 class Wallpaper {
   constructor(scenery) {
     this.scenery = scenery;
     this.root = document.documentElement;
-    this.prefs = { source: 'apod', preferDark: true, develop: true, dim: 20, pick: null, ...Store.get(WALL_KEY, {}) };
+    this.prefs = { source: 'apod', preferDark: false, develop: true, dim: 20, pick: null, ...Store.get(WALL_KEY, {}) };
     if (!PICTURE_SOURCES[this.prefs.source] && this.prefs.source !== 'scene') this.prefs.source = 'apod';
+    // Earlier versions defaulted "prefer dark" on, which could hide today's picture
+    if ((this.prefs.rev || 0) < 2) {
+      this.prefs.preferDark = false;
+      this.prefs.rev = 2;
+      Store.set(WALL_KEY, this.prefs);
+    }
     this.stats = Store.get(WALL_STATS_KEY, {});
     this.lists = {}; // recent pictures per source
+    this.shownSource = null; // the source on screen, which differs from prefs.source after a fallback
     this.current = null;
+    this.currentSrc = null;
     this.gridBuilt = false;
+    this.gridWanted = false; // the sheet has been opened, so keep the thumbnails up to date
+    this.gridSource = null;
     this.onChange = null;
 
     this.els = {
@@ -1455,14 +1476,16 @@ class Wallpaper {
       captionLink: document.getElementById('captionLink')
     };
     this.defaultStatus = this.els.status?.textContent || '';
+    this.note = null; // why the picture on screen isn't from the chosen source
 
     this.els.sources.forEach(input => input.addEventListener('change', () => {
       if (!input.checked) return;
       this.prefs.source = input.value;
       this.prefs.pick = null;
       this.savePrefs();
-      this.gridBuilt = false;
-      this.prefs.source === 'scene' ? this.useScene() : this.refresh({ buildGrid: true });
+      this.note = null;
+      this.setStatus(null);
+      this.prefs.source === 'scene' ? this.useScene() : this.refresh();
     }));
     this.els.dark?.addEventListener('change', () => {
       this.prefs.preferDark = this.els.dark.checked;
@@ -1479,7 +1502,7 @@ class Wallpaper {
       this.prefs.dim = parseInt(this.els.dim.value, 10);
       this.savePrefs();
       this.applyDim();
-      if (this.current && this.stats[this.current.id]) this.applyLook(this.stats[this.current.id]);
+      if (this.current && this.stats[this.current.id]) this.saveLook(this.applyLook(this.stats[this.current.id]));
     });
 
     this.syncControls();
@@ -1509,7 +1532,7 @@ class Wallpaper {
   }
 
   setStatus(text) {
-    if (this.els.status) this.els.status.textContent = text || this.defaultStatus;
+    if (this.els.status) this.els.status.textContent = text || this.note || this.defaultStatus;
   }
 
   applyDim() {
@@ -1529,7 +1552,7 @@ class Wallpaper {
 
   async load(source) {
     if (this.lists[source]) return this.lists[source];
-    const res = await fetch(`/api/wallpaper?source=${source}`);
+    const res = await fetch(`/api/wallpaper?source=${source}&v=${PICTURE_FEED_VERSION}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const images = (data.images || []).filter(Wallpaper.valid);
@@ -1539,28 +1562,51 @@ class Wallpaper {
   }
 
   get images() {
-    return this.lists[this.prefs.source] || [];
+    return this.lists[this.shownSource || this.prefs.source] || [];
   }
 
-  async refresh({ buildGrid = false } = {}) {
+  // Today's picture from the chosen source; if that source doesn't answer, the other
+  // one; if neither does, a painted scene. Each fallback says so.
+  async refresh() {
     const source = this.prefs.source;
     if (source === 'scene') return;
+    this.note = null;
     this.setStatus(null);
-    try {
-      await this.load(source);
-      const img = await this.choose();
-      if (this.prefs.source !== source) return;
-      await this.show(img);
-      if (buildGrid) this.renderGrid(true);
-    } catch {
-      if (this.prefs.source !== source) return;
-      this.useScene();
-      this.setStatus(`Couldn't load today's ${PICTURE_SOURCES[source].name}, so a built-in scene is showing. It tries again each time you open the site.`);
+    const order = [source, ...Object.keys(PICTURE_SOURCES).filter(s => s !== source)];
+    for (const candidate of order) {
+      try {
+        const images = await this.load(candidate);
+        const first = await this.choose(images);
+        if (this.prefs.source !== source) return;
+        // If a picture won't load, try the next couple before giving up on the source
+        const tries = [first, ...images.filter(img => img !== first)].slice(0, 3);
+        let shown = false;
+        for (const img of tries) {
+          try {
+            await this.show(img, candidate);
+            shown = true;
+            break;
+          } catch {}
+        }
+        if (!shown) throw new Error('no picture loaded');
+        if (candidate !== source) {
+          const wanted = PICTURE_SOURCES[source], used = PICTURE_SOURCES[candidate];
+          this.note = `${wanted.who} didn\u2019t answer, so ${used.picture} of the day is showing instead.`;
+          this.setStatus(null);
+          window.app?.toast?.('Picture of the day.', `${wanted.who} didn\u2019t answer, so this one is from ${used.who}.`);
+        }
+        return;
+      } catch {
+        if (this.prefs.source !== source) return;
+      }
     }
+    this.useScene();
+    this.note = 'Couldn\u2019t load a picture of the day, so a painted scene is showing. It tries again each time you open the site.';
+    this.setStatus(null);
+    window.app?.toast?.('Picture of the day.', 'Couldn\u2019t load one right now, so this is a painted scene.');
   }
 
-  async choose() {
-    const images = this.images;
+  async choose(images) {
     const today = new Date().toDateString();
     const pick = this.prefs.pick;
     if (pick && pick.day === today) {
@@ -1721,7 +1767,7 @@ class Wallpaper {
     return { tone, accent, ink, bg };
   }
 
-  async show(img) {
+  async show(img, from = this.prefs.source) {
     const source = this.prefs.source;
     const stats = await this.analyze(img);
     let src = Wallpaper.pickSrc(img);
@@ -1734,17 +1780,24 @@ class Wallpaper {
     }
     if (this.prefs.source !== source) return;
     this.current = img;
+    this.currentSrc = src;
+    this.shownSource = from;
     this.root.style.setProperty('--wall', `url("${src}")`);
     this.root.dataset.wall = 'on';
-    const look = this.applyLook(stats);
-    Store.set(LOOK_KEY, { ...look, wall: src, dim: this.prefs.dim });
+    this.saveLook(this.applyLook(stats));
     this.scenery.markActive(false);
     this.updateCaption();
     this.renderGrid();
   }
 
+  saveLook(look) {
+    if (this.currentSrc) Store.set(LOOK_KEY, { ...look, wall: this.currentSrc, dim: this.prefs.dim });
+  }
+
   useScene() {
     this.current = null;
+    this.currentSrc = null;
+    this.shownSource = null;
     this.root.dataset.wall = 'off';
     this.root.dataset.tone = 'dark';
     ['--accent', '--accent-ink', '--bg', '--wall'].forEach(p => this.root.style.removeProperty(p));
@@ -1784,16 +1837,18 @@ class Wallpaper {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 
-  // Thumbnails of recent pictures; built the first time the sheet opens
+  // Thumbnails of recent pictures from the source on screen; built the first time the sheet opens
   renderGrid(build = false) {
     const grid = this.els.grid;
     if (!grid) return;
+    if (build) this.gridWanted = true;
     if (!this.photoOn || !this.images.length) {
       grid.replaceChildren();
       this.gridBuilt = false;
       return;
     }
-    if (!this.gridBuilt && build) {
+    if (this.gridSource !== this.shownSource) this.gridBuilt = false;
+    if (!this.gridBuilt && this.gridWanted) {
       // An even count, so the two-column grid never ends on a lone thumbnail
       const shown = this.images.length > 1 ? this.images.slice(0, this.images.length - (this.images.length % 2)) : this.images;
       grid.replaceChildren(...shown.map(img => {
@@ -1812,11 +1867,12 @@ class Wallpaper {
           this.prefs.pick = { id: img.id, day: new Date().toDateString() };
           this.savePrefs();
           this.setStatus(null);
-          this.show(img).catch(() => this.setStatus('That picture didn\'t load. Try another one.'));
+          this.show(img, this.shownSource || this.prefs.source).catch(() => this.setStatus('That picture didn\'t load. Try another one.'));
         });
         return btn;
       }));
       this.gridBuilt = true;
+      this.gridSource = this.shownSource;
     }
     grid.querySelectorAll('.thumb').forEach(btn => {
       btn.setAttribute('aria-pressed', String(btn.dataset.id === this.current?.id));
@@ -2021,6 +2077,246 @@ class PopOut {
   }
 }
 
+// ── Home: search, shortcuts and the clock ────────────────────────────────────
+
+const ENGINES = {
+  google:     { label: 'Google',     url: 'https://www.google.com/search?q=' },
+  duckduckgo: { label: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=' },
+  bing:       { label: 'Bing',       url: 'https://www.bing.com/search?q=' },
+  pubmed:     { label: 'PubMed',     url: 'https://pubmed.ncbi.nlm.nih.gov/?term=' },
+  wikipedia:  { label: 'Wikipedia',  url: 'https://en.wikipedia.org/w/index.php?search=' },
+  youtube:    { label: 'YouTube',    url: 'https://www.youtube.com/results?search_query=' }
+};
+const MAX_SHORTCUTS = 12;
+const COMMON_TLDS = new Set(('com net org edu gov mil int info biz dev app xyz site online store tech blog '
+  + 'page cloud art design news shop live wiki social email link one top fun club space world').split(' '));
+
+class Home {
+  constructor() {
+    const hourCycle = new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions().hourCycle || 'h23';
+    this.prefs = { engine: 'google', links: [], clock24: !hourCycle.startsWith('h1'), newTab: false, ...Store.get(HOME_KEY, {}) };
+    if (!ENGINES[this.prefs.engine]) this.prefs.engine = 'google';
+    this.prefs.links = (Array.isArray(this.prefs.links) ? this.prefs.links : [])
+      .filter(l => l && typeof l.name === 'string' && Home.normalizeUrl(l.url))
+      .slice(0, MAX_SHORTCUTS);
+
+    this.form = document.getElementById('searchForm');
+    this.input = document.getElementById('searchInput');
+    this.engineSelect = document.getElementById('searchEngine');
+    this.engineName = document.getElementById('engineName');
+    this.list = document.getElementById('shortcutList');
+    this.linkForm = document.getElementById('shortcutForm');
+    this.linkName = document.getElementById('shortcutName');
+    this.linkUrl = document.getElementById('shortcutUrl');
+    this.clock = {
+      digits: document.getElementById('clockDigits'),
+      day: document.getElementById('clockDay'),
+      date: document.getElementById('clockDate'),
+      sep: document.getElementById('clockSep'),
+      meridiem: document.getElementById('clockMeridiem')
+    };
+
+    Object.entries(ENGINES).forEach(([id, engine]) => {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = engine.label;
+      this.engineSelect?.appendChild(option);
+    });
+    this.engineSelect?.addEventListener('change', () => {
+      this.prefs.engine = this.engineSelect.value;
+      this.save();
+      this.renderEngine();
+      this.input?.focus();
+    });
+
+    this.form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.go(false);
+    });
+    this.input?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || e.shiftKey)) {
+        e.preventDefault();
+        this.go(true);
+      } else if (e.key === 'Escape') {
+        if (this.input.value) this.input.value = '';
+        else this.input.blur();
+      }
+    });
+
+    this.linkForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.saveLink();
+    });
+    document.getElementById('shortcutCancel')?.addEventListener('click', () => this.closeLinkForm());
+    this.linkForm?.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.closeLinkForm(); });
+
+    const clock24 = document.getElementById('setClock24');
+    const newTab = document.getElementById('setNewTab');
+    if (clock24) {
+      clock24.checked = this.prefs.clock24;
+      clock24.addEventListener('change', () => { this.prefs.clock24 = clock24.checked; this.save(); this.tickClock(); });
+    }
+    if (newTab) {
+      newTab.checked = this.prefs.newTab;
+      newTab.addEventListener('change', () => { this.prefs.newTab = newTab.checked; this.save(); });
+    }
+
+    this.renderEngine();
+    this.renderLinks();
+    this.startClock();
+  }
+
+  save() {
+    Store.set(HOME_KEY, this.prefs);
+  }
+
+  focus() {
+    this.input?.focus();
+  }
+
+  renderEngine() {
+    if (this.engineSelect) this.engineSelect.value = this.prefs.engine;
+    if (this.engineName) this.engineName.textContent = ENGINES[this.prefs.engine].label;
+    if (this.input) this.input.setAttribute('aria-label', `Search ${ENGINES[this.prefs.engine].label}, or type an address`);
+  }
+
+  // "github.com" or "https://…" opens the site; anything else is a search
+  static addressFrom(text) {
+    const t = text.trim();
+    if (!t || /\s/.test(t)) return null;
+    if (/^https?:\/\//i.test(t)) return Home.normalizeUrl(t);
+    if (/^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#].*)?$/i.test(t)) return Home.normalizeUrl(`http://${t}`);
+    const host = /^(?:[a-z0-9-]+\.)+([a-z]{2,})(:\d+)?([/?#].*)?$/i.exec(t);
+    if (host && (/^www\./i.test(t) || Home.isTld(host[1]))) return Home.normalizeUrl(`https://${t}`);
+    return null;
+  }
+
+  // Country codes and the common generic endings, so "node.js" or "Dr.Smith" stays a search
+  static isTld(tld) {
+    const t = tld.toLowerCase();
+    if (t.length === 2) return !['js', 'ts', 'py', 'md'].includes(t);
+    return COMMON_TLDS.has(t);
+  }
+
+  static normalizeUrl(raw) {
+    if (typeof raw !== 'string' || raw.length > 300) return null;
+    const value = /^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`;
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+    } catch {
+      return null;
+    }
+  }
+
+  go(newTab) {
+    const query = this.input?.value.trim();
+    if (!query) {
+      this.focus();
+      return;
+    }
+    const url = Home.addressFrom(query) || `${ENGINES[this.prefs.engine].url}${encodeURIComponent(query)}`;
+    if (newTab || this.prefs.newTab) {
+      window.open(url, '_blank', 'noopener');
+      this.input.value = '';
+    } else {
+      window.location.href = url;
+    }
+  }
+
+  renderLinks() {
+    if (!this.list) return;
+    const items = this.prefs.links.map((link, i) => {
+      const li = document.createElement('li');
+      li.className = 'shortcut';
+      const a = document.createElement('a');
+      a.href = link.url;
+      a.rel = 'noopener';
+      a.textContent = link.name;
+      a.title = link.url;
+      const del = document.createElement('button');
+      del.className = 'delete-btn';
+      del.textContent = '×';
+      del.setAttribute('aria-label', `Remove ${link.name}`);
+      del.addEventListener('click', () => {
+        this.prefs.links.splice(i, 1);
+        this.save();
+        this.renderLinks();
+      });
+      li.append(a, del);
+      return li;
+    });
+    if (this.prefs.links.length < MAX_SHORTCUTS) {
+      const li = document.createElement('li');
+      const add = document.createElement('button');
+      add.className = 'shortcut-add';
+      add.textContent = this.prefs.links.length ? '+ add' : '+ add a shortcut';
+      add.addEventListener('click', () => this.openLinkForm());
+      li.appendChild(add);
+      items.push(li);
+    }
+    this.list.replaceChildren(...items);
+  }
+
+  openLinkForm() {
+    if (!this.linkForm) return;
+    this.linkForm.hidden = false;
+    this.list.hidden = true;
+    this.linkName.value = '';
+    this.linkUrl.value = '';
+    this.linkName.focus();
+  }
+
+  closeLinkForm() {
+    if (!this.linkForm) return;
+    this.linkForm.hidden = true;
+    this.list.hidden = false;
+  }
+
+  saveLink() {
+    const url = Home.normalizeUrl(this.linkUrl.value);
+    if (!url) {
+      this.linkUrl.value = '';
+      this.linkUrl.placeholder = 'that address didn’t work, try again';
+      this.linkUrl.focus();
+      return;
+    }
+    const name = this.linkName.value.trim() || new URL(url).hostname.replace(/^www\./, '');
+    this.prefs.links.push({ name: name.slice(0, 24), url });
+    this.save();
+    this.closeLinkForm();
+    this.renderLinks();
+  }
+
+  startClock() {
+    this.tickClock();
+    setTimeout(() => {
+      this.tickClock();
+      setInterval(() => this.tickClock(), 60000);
+    }, 60000 - (Date.now() % 60000) + 50);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) this.tickClock(); });
+  }
+
+  tickClock() {
+    const now = new Date();
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    let hours = now.getHours();
+    let meridiem = '';
+    if (!this.prefs.clock24) {
+      meridiem = hours < 12 ? 'am' : 'pm';
+      hours = hours % 12 || 12;
+    }
+    DOMUtils.setDigits(this.clock.digits, `${this.prefs.clock24 ? String(hours).padStart(2, '0') : hours}:${mins}`);
+    if (this.clock.day) this.clock.day.textContent = now.toLocaleDateString([], { weekday: 'long' });
+    if (this.clock.date) this.clock.date.textContent = now.toLocaleDateString([], { day: 'numeric', month: 'long' });
+    if (this.clock.meridiem) {
+      this.clock.meridiem.hidden = !meridiem;
+      this.clock.meridiem.textContent = meridiem;
+    }
+    if (this.clock.sep) this.clock.sep.hidden = !meridiem;
+  }
+}
+
 // ── App ──────────────────────────────────────────────────────────────────────
 
 class App {
@@ -2031,6 +2327,7 @@ class App {
     if (confirmOverlay) confirmOverlay.inert = true;
 
     this.tabIcon = new TabIcon();
+    this.home = new Home();
     this.scenery = new Scenery();
     this.wallpaper = new Wallpaper(this.scenery);
     this.scenery.onPick = () => this.wallpaper.turnOff();
@@ -2057,6 +2354,13 @@ class App {
       settings: new Sheet('settingsSheet', ['settingsBtn'])
     };
     this.about = new Modal('aboutOverlay', { openers: ['aboutLink'] });
+
+    // The site opens on search; #focus opens the timer
+    document.querySelectorAll('.view-tab').forEach(tab => {
+      tab.addEventListener('click', () => this.setView(tab.dataset.view, { focusSearch: true }));
+    });
+    window.addEventListener('hashchange', () => this.setView(location.hash === '#focus' ? 'focus' : 'search'));
+    this.setView(location.hash === '#focus' ? 'focus' : 'search', { focusSearch: canHover });
 
     History.render();
     Quotes.show();
@@ -2095,6 +2399,20 @@ class App {
   onTimerChange() {
     this.ambience?.sync();
     this.popout?.render();
+  }
+
+  setView(view, { focusSearch = false } = {}) {
+    this.view = view === 'focus' ? 'focus' : 'search';
+    const app = document.getElementById('app');
+    app?.classList.toggle('view-search', this.view === 'search');
+    app?.classList.toggle('view-focus', this.view === 'focus');
+    document.querySelectorAll('.view-tab').forEach(tab => {
+      tab.setAttribute('aria-selected', String(tab.dataset.view === this.view));
+    });
+    if (this.view === 'search' && this.isZen) this.toggleZen(false);
+    const hash = this.view === 'focus' ? '#focus' : '';
+    if (location.hash !== hash) history.replaceState(null, '', `${location.pathname}${location.search}${hash}`);
+    if (this.view === 'search' && focusSearch) setTimeout(() => this.home.focus(), 50);
   }
 
   // A short note at the top of the screen; lead is set in italic display type
@@ -2166,9 +2484,21 @@ class App {
 
   setupShortcuts() {
     document.addEventListener('keydown', (e) => {
-      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
       if (document.querySelector('.overlay.open')) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        this.setView('search', { focusSearch: true });
+        return;
+      }
+      if (this.view === 'search') {
+        // On the search view, typing anywhere goes into the search bar (Space stays with
+        // the focused button)
+        if (e.key.length === 1 && e.key !== ' ' && !e.repeat && !document.querySelector('.sheet.open')) this.home.focus();
+        return;
+      }
+      if (e.repeat) return;
       const key = e.key.toLowerCase();
       if (e.code === 'Space') {
         if (e.target.closest?.('button, a')) return; // let the focused control handle it

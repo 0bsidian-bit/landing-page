@@ -53,11 +53,12 @@
 
   --gutter-l: max(32px, env(safe-area-inset-left, 0px));
   --gutter-r: max(32px, env(safe-area-inset-right, 0px));
+  --head: 48px; /* masthead height below the top padding; sheets and toasts start under it */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Built-in scenes set their own accent; a photo overrides it inline */
-:root[data-scene="winden"]   { --bg: #0a0e11; --accent: #f2c94c; --accent-ink: #1d1603; }
+:root[data-scene="forest"]   { --bg: #0a0e11; --accent: #f2c94c; --accent-ink: #1d1603; }
 :root[data-scene="horizon"]  { --bg: #050407; --accent: #ffb36b; --accent-ink: #2a1404; }
 :root[data-scene="obsidian"] { --bg: #0b0915; --accent: #c3b0ff; --accent-ink: #170f2e; }
 :root[data-scene="glacier"]  { --bg: #08131f; --accent: #8fd4ff; --accent-ink: #06202e; }
@@ -123,6 +124,10 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
 /* Small capitals for every label and control */
 .index-link,
+.view-tab,
+.engine,
+.shortcut a,
+.shortcut-add,
 .phase-line,
 .ctl,
 .mode,
@@ -210,14 +215,14 @@ button, a, input, textarea, select { touch-action: manipulation; }
   transition: opacity 0.8s ease, visibility 0.8s;
 }
 
-/* While a timer runs, everything but the time steps back */
-.app.is-running .masthead,
-.app.is-running .quote,
-.app.is-running .caption { opacity: 0.38; }
-.app.is-running .masthead:hover,
-.app.is-running .masthead:focus-within,
-.app.is-running .caption:hover,
-.app.is-running .caption:focus-within { opacity: 1; }
+/* While a timer runs in the focus view, everything but the time steps back */
+.app.view-focus.is-running .masthead,
+.app.view-focus.is-running .quote,
+.app.view-focus.is-running .caption { opacity: 0.38; }
+.app.view-focus.is-running .masthead:hover,
+.app.view-focus.is-running .masthead:focus-within,
+.app.view-focus.is-running .caption:hover,
+.app.view-focus.is-running .caption:focus-within { opacity: 1; }
 
 /* Zen: only the time and its controls */
 .app.zen .masthead,
@@ -226,6 +231,13 @@ button, a, input, textarea, select { touch-action: manipulation; }
   opacity: 0;
   visibility: hidden;
 }
+
+/* Each view shows its own pieces of the poster */
+.app.view-search .timer,
+.app.view-search .quote,
+.app.view-search #zenBtn,
+.app.view-focus .home,
+.app.view-focus .clock { display: none; }
 
 /* ── Masthead ────────────────────────────────────────────────────────────── */
 
@@ -257,6 +269,31 @@ button, a, input, textarea, select { touch-action: manipulation; }
   margin-right: -0.46em;
 }
 
+.views {
+  display: flex;
+  gap: 20px;
+  margin-left: 22px;
+  margin-right: auto;
+  padding-left: 22px;
+  border-left: 1px solid var(--line);
+}
+.view-tab {
+  position: relative;
+  padding: 6px 0;
+  color: var(--ink-3);
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.view-tab:hover,
+.view-tab[aria-selected="true"] { color: var(--ink); }
+.view-tab[aria-selected="true"]::after { transform: scaleX(1); }
+.view-timer {
+  margin-left: 8px;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
 .index {
   display: flex;
   align-items: center;
@@ -270,6 +307,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
   transition: color 0.2s;
 }
 .index-link::after,
+.view-tab::after,
 .mode::after {
   content: '';
   position: absolute;
@@ -327,16 +365,161 @@ button, a, input, textarea, select { touch-action: manipulation; }
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto 1fr auto;
   grid-template-areas:
-    "quote ."
+    "top ."
     ". ."
-    "timer caption";
+    "main caption";
   gap: 24px 48px;
   padding-top: clamp(28px, 7vh, 88px);
 }
 
 .quote {
-  grid-area: quote;
+  grid-area: top;
   max-width: 30ch;
+}
+
+/* ── Home: search and shortcuts ──────────────────────────────────────────── */
+
+.home {
+  grid-area: top;
+  width: min(100%, 780px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 0 12px;
+  border-bottom: 1px solid var(--ink-3);
+  transition: border-color 0.25s;
+}
+.search:focus-within { border-bottom-color: var(--accent); }
+.search-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(26px, 1.8vw + 16px, 42px);
+  line-height: 1.2;
+  text-shadow: 0 2px 24px rgba(var(--shade-rgb), 0.35);
+}
+.search input::placeholder { color: var(--ink-3); }
+.search input:focus-visible { outline: none; }
+.search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+.engine {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.engine::after {
+  content: '';
+  margin-top: 3px;
+  border: 4px solid transparent;
+  border-top-color: currentColor;
+}
+.engine:hover { color: var(--ink); }
+.engine:focus-within { outline: 1px solid var(--accent); outline-offset: 6px; }
+.engine select {
+  position: absolute;
+  inset: -8px;
+  width: calc(100% + 16px);
+  opacity: 0;
+  cursor: pointer;
+}
+.engine option { background: var(--paper); color: var(--ink); }
+
+.search-go {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink-2);
+  transition: color 0.2s;
+}
+.search-go:hover { color: var(--accent); }
+.search-go svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.shortcuts-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 22px;
+}
+.shortcut {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.shortcut a {
+  padding: 4px 0;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.shortcut a:hover { color: var(--ink); }
+.shortcut .delete-btn { width: 16px; font-size: 15px; }
+.shortcut:hover .delete-btn { opacity: 1; }
+.shortcut-add {
+  padding: 4px 0;
+  color: var(--ink-3);
+  transition: color 0.2s;
+}
+.shortcut-add:hover { color: var(--ink); }
+
+.shortcut-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 18px;
+}
+.shortcut-form input {
+  width: 11em;
+  min-width: 0;
+  padding: 6px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--ink-3);
+  background: transparent;
+  font-size: 15px;
+  transition: border-color 0.2s;
+}
+.shortcut-form #shortcutUrl { width: 18em; }
+.shortcut-form input:focus { border-bottom-color: var(--accent); }
+.shortcut-form input:focus-visible { outline: none; }
+.shortcut-form input::placeholder { color: var(--ink-3); }
+
+.clock {
+  grid-area: main;
+  align-self: end;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .quote blockquote {
   font-family: var(--font-display);
@@ -355,7 +538,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 }
 
 .timer {
-  grid-area: timer;
+  grid-area: main;
   align-self: end;
   min-width: 0;
   display: flex;
@@ -570,18 +753,23 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
 /* ── Toasts ──────────────────────────────────────────────────────────────── */
 
+/* Top right, under the index, where neither view puts anything; beside an open sheet */
 .toast-zone {
   position: fixed;
   z-index: 90;
-  top: calc(max(26px, env(safe-area-inset-top, 0px)) + 52px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(440px, calc(100vw - 32px));
+  top: calc(max(26px, env(safe-area-inset-top, 0px)) + var(--head) + 12px);
+  right: var(--gutter-r);
+  width: min(400px, calc(100vw - 32px));
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   pointer-events: none;
+  transition: right 0.3s var(--ease);
+}
+body:has(.sheet.open) .toast-zone {
+  right: calc(min(460px, 100vw) + 24px);
+  width: min(400px, calc(100vw - min(460px, 100vw) - 48px));
 }
 .toast {
   padding: 12px 18px;
@@ -591,7 +779,6 @@ button, a, input, textarea, select { touch-action: manipulation; }
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35);
   font-size: 14px;
   line-height: 1.45;
-  text-align: center;
   animation: toastIn 0.4s var(--ease) both;
 }
 .toast em {
@@ -609,7 +796,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 .sheet {
   position: fixed;
   z-index: 40;
-  top: calc(max(26px, env(safe-area-inset-top, 0px)) + 48px);
+  top: calc(max(26px, env(safe-area-inset-top, 0px)) + var(--head));
   right: 0;
   bottom: 0;
   width: min(460px, 100vw);
@@ -1349,6 +1536,13 @@ kbd {
   .caption { max-width: 240px; }
 }
 
+/* The index gets its own row once it no longer fits beside the views */
+@media (max-width: 960px) {
+  :root { --head: 88px; }
+  .masthead { flex-wrap: wrap; }
+  .index { width: 100%; }
+}
+
 @media (max-height: 720px) and (min-width: 721px) {
   .poster { padding-top: 20px; }
   .quote blockquote { font-size: 20px; }
@@ -1359,9 +1553,9 @@ kbd {
   .poster {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      "quote"
+      "top"
       "."
-      "timer"
+      "main"
       "caption";
     grid-template-rows: auto 1fr auto auto;
   }
@@ -1380,7 +1574,8 @@ kbd {
   }
   .app { padding-top: max(18px, env(safe-area-inset-top, 0px)); }
 
-  .masthead { flex-direction: column; align-items: flex-start; }
+  .masthead { flex-wrap: wrap; }
+  .views { margin-right: 0; margin-left: auto; padding-left: 0; border-left: 0; gap: 16px; }
   .index {
     width: 100%;
     flex-wrap: wrap;
@@ -1392,6 +1587,12 @@ kbd {
   .index-icon { display: none; }
 
   .poster { gap: 18px; padding-top: 22px; }
+  .search { gap: 10px; }
+  .search-icon { width: 20px; height: 20px; }
+  .search input { font-size: 24px; }
+  .engine-name { display: none; }
+  .shortcut-form input,
+  .shortcut-form #shortcutUrl { width: 100%; }
   .quote blockquote { font-size: 19px; }
   .timer-digits { font-size: clamp(84px, 29vw, 170px); }
   .timer-digits.is-long { font-size: clamp(72px, 22vw, 140px); }
@@ -1413,6 +1614,20 @@ kbd {
     transform: translateY(100%);
   }
   .sheet-title { font-size: 38px; }
+
+  /* At the bottom on phones, where the search bar takes the full width at the top */
+  .toast-zone,
+  body:has(.sheet.open) .toast-zone {
+    top: auto;
+    bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 8px);
+    left: 50%;
+    right: auto;
+    width: min(400px, calc(100vw - 32px));
+    transform: translateX(-50%);
+    align-items: center;
+  }
+  .toast { text-align: center; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
 
   /* Keep iOS from zooming into focused inputs */
   input, textarea, select { font-size: 16px !important; }
