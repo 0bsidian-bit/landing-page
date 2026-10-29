@@ -47,11 +47,11 @@ The worker has two routes, both cached at Cloudflare's edge:
 | `GET /api/wallpaper?source=apod\|bing` | Recent pictures with title, caption, credit, link and image URLs | 30 minutes |
 | `GET /api/wallpaper/image?…` | Passes one image through from NASA or Bing | 7 days |
 
-**NASA** comes from [`science.nasa.gov/wp-json/wp/v2/apod-basic`](https://science.nasa.gov/wp-json/wp/v2/apod-basic), which replaces the old `api.nasa.gov/planetary/apod` endpoint (archived on 1 December 2026). The worker reads the newest 25 entries, newest first. The image comes from `hdurl` (a still on video days), and the HTML title, explanation and credit are turned into plain text. Pictures with a copyright holder are shown with their credit, as NASA's own site does. Only images on `nasa.gov` hosts are passed through, and the NASA logo the feed returns when it can't find a picture is skipped.
+**NASA** comes from [`science.nasa.gov/wp-json/wp/v2/apod-basic`](https://science.nasa.gov/wp-json/wp/v2/apod-basic), which replaces the old `api.nasa.gov/planetary/apod` endpoint (archived on 1 December 2026). The worker reads the newest 25 entries, newest first, and lists up to 12. The image comes from `hdurl` (a still on video days), then `url`. The feed sometimes gives an article page, a NASA logo placeholder or a file that has gone instead, so each one is checked with a `HEAD` request, and only JPEG, PNG, WebP, GIF or AVIF images are listed. If neither works, the worker reads the picture off that day's page on `apod.nasa.gov`; if that fails too, the day is left out. The checks are capped so building the list stays under Cloudflare's 50-subrequest limit. The HTML title, explanation and credit are turned into plain text. Pictures with a copyright holder are shown with their credit, as NASA's own site does. Only images on `nasa.gov` hosts are passed through.
 
 **Bing** comes from `bing.com/HPImageArchive.aspx` (the last 8 days). Images are requested by their `OHR.` id at a fixed set of sizes: 400×240 for thumbnails, 1920×1080, UHD, and 1080×1920 for phones.
 
-Anything else sent to the image route gets a `400`. The worker only accepts `GET` and `HEAD`.
+The image route only passes on JPEG, PNG, WebP, GIF and AVIF. Anything else sent to it gets a `400`, and an upstream answer that isn't one of those images gets a `404`. In the browser, a picture that still fails to load is dropped from the list and the thumbnails, so no broken images are shown. The worker only accepts `GET` and `HEAD`.
 
 ---
 

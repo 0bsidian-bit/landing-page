@@ -15,7 +15,12 @@ const CONFIG = {
   BING_ID: /^OHR\.[A-Za-z0-9_-]{1,120}$/,
   // NASA's APOD feed (the old api.nasa.gov endpoint is being archived); newest 25 entries
   APOD_API: "https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=25",
+  APOD_PAGE: "https://apod.nasa.gov/apod/", // each day's classic page is apYYMMDD.html
   APOD_IMAGE_HOST: /(^|\.)nasa\.gov$/i, // science.nasa.gov, assets.science.nasa.gov, apod.nasa.gov, …
+  APOD_DAYS: 16,    // newest entries whose pictures are looked up
+  APOD_LISTED: 12,
+  APOD_PROBES: 36,  // upstream requests allowed while looking them up (Workers cap subrequests at 50)
+  IMAGE_TYPE: /^image\/(jpeg|png|webp|gif|avif)\b/i, // formats every browser can show
   USER_AGENT: "0bsidian/1.0 (+https://lokeshtewari.uk)",
 };
 
@@ -45,7 +50,7 @@ class HttpUtils {
   static async proxyImage(url) {
     const upstream = await fetch(url, { headers: { "Accept": "image/*", "User-Agent": CONFIG.USER_AGENT } });
     const type = upstream.headers.get("content-type") || "";
-    if (!upstream.ok || !type.startsWith("image/")) {
+    if (!upstream.ok || !CONFIG.IMAGE_TYPE.test(type)) {
       return HttpUtils.jsonResponse({ error: "Photo not found" }, 404);
     }
     return new Response(upstream.body, {
@@ -142,26 +147,71 @@ class Apod {
     return url.toString();
   }
 
+  // "2026-10-29…" → "20261029"
+  static day(d) {
+    const ymd = /(\d{4})-(\d{2})-(\d{2})/.exec(String(d?.date || ""));
+    return ymd ? `${ymd[1]}${ymd[2]}${ymd[3]}` : null;
+  }
+
   static async list() {
     const res = await fetch(CONFIG.APOD_API, {
       headers: { "Accept": "application/json", "User-Agent": CONFIG.USER_AGENT },
     });
     if (!res.ok) throw new Error(`APOD ${res.status}`);
     const data = await res.json();
-    return (Array.isArray(data) ? data : [])
-      .map(Apod.parse)
-      .filter(Boolean)
-      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
-      .slice(0, 12);
+    const entries = (Array.isArray(data) ? data : [])
+      .filter(d => d && typeof d === "object")
+      .sort((a, b) => (Apod.day(b) || "").localeCompare(Apod.day(a) || ""))
+      .slice(0, CONFIG.APOD_DAYS);
+    const budget = { left: CONFIG.APOD_PROBES };
+    const images = await Promise.all(entries.map(d => Apod.parse(d, budget)));
+    return images.filter(Boolean).slice(0, CONFIG.APOD_LISTED);
   }
 
-  static parse(d) {
-    if (!d || typeof d !== "object") return null;
-    // hdurl is the full image (a still frame on video days); url is usually the article
-    const image = Apod.imageSource(d.hdurl) || Apod.imageSource(d.url);
+  // A request to NASA while building the list, or null once the budget is spent
+  static async upstream(url, budget, init) {
+    if (budget.left-- <= 0) return null;
+    try {
+      return await fetch(url, { ...init, headers: { "User-Agent": CONFIG.USER_AGENT, ...init.headers } });
+    } catch {
+      return null;
+    }
+  }
+
+  // Whether the URL really answers with a picture a browser can show
+  static async isImage(url, budget) {
+    const res = await Apod.upstream(url, budget, { method: "HEAD", headers: { "Accept": "image/*" } });
+    return !!res?.ok && CONFIG.IMAGE_TYPE.test(res.headers.get("content-type") || "");
+  }
+
+  // The picture on the day's classic page: <a href="image/2610/Name.jpg"><img src="image/2610/Name_1024.jpg">
+  static async pageImage(compact, budget) {
+    const res = await Apod.upstream(`${CONFIG.APOD_PAGE}ap${compact.slice(2)}.html`, budget, { headers: { "Accept": "text/html" } });
+    if (!res?.ok) return null;
+    const html = await res.text().catch(() => "");
+    // The linked full-size file first, then the picture shown on the page
+    const file = String.raw`["']?((?:https?://apod\.nasa\.gov/apod/)?image/[^"'\s>]+\.(?:jpe?g|png|webp|gif|avif))["'\s>]`;
+    const match = new RegExp(String.raw`<a\s[^>]*href\s*=\s*${file}`, "i").exec(html)
+      || new RegExp(String.raw`<img\s[^>]*src\s*=\s*${file}`, "i").exec(html);
+    return match ? Apod.imageSource(new URL(match[1], CONFIG.APOD_PAGE).href) : null;
+  }
+
+  // hdurl is the full image (a still frame on video days) and url is usually the article.
+  // The feed sometimes gives a page, a logo placeholder or a missing file instead, so each
+  // one is checked, then the day's page on apod.nasa.gov is tried.
+  static async findImage(d, compact, budget) {
+    const candidates = [...new Set([Apod.imageSource(d.hdurl), Apod.imageSource(d.url)].filter(Boolean))];
+    for (const url of candidates) {
+      if (await Apod.isImage(url, budget)) return url;
+    }
+    const fromPage = compact ? await Apod.pageImage(compact, budget) : null;
+    return fromPage && !candidates.includes(fromPage) && await Apod.isImage(fromPage, budget) ? fromPage : null;
+  }
+
+  static async parse(d, budget) {
+    const compact = Apod.day(d);
+    const image = await Apod.findImage(d, compact, budget);
     if (!image) return null;
-    const ymd = /(\d{4})-(\d{2})-(\d{2})/.exec(String(d.date || ""));
-    const compact = ymd ? `${ymd[1]}${ymd[2]}${ymd[3]}` : null;
     const src = imageUrl({ source: "apod", u: image });
     const link = [d.permalink, d.url, d.basic_html_url].find(l => typeof l === "string" && /^https:\/\/([a-z0-9-]+\.)*nasa\.gov\//i.test(l))
       || (compact ? `https://apod.nasa.gov/apod/ap${compact.slice(2)}.html` : "https://apod.nasa.gov/apod/");
