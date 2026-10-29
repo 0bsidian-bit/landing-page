@@ -1435,7 +1435,7 @@ class Scenery {
 
 // ── Picture of the day (NASA or Bing, passed through the worker) ─────────────
 
-const PICTURE_FEED_VERSION = 2; // bump when the worker's list format changes, to skip stale caches
+const PICTURE_FEED_VERSION = 3; // bump when the worker's list format changes, to skip stale caches
 const PICTURE_SOURCES = {
   apod: { who: 'NASA', picture: 'NASA\u2019s space picture' },
   bing: { who: 'Bing', picture: 'Bing\u2019s photo' }
@@ -1565,6 +1565,20 @@ class Wallpaper {
     return this.lists[this.shownSource || this.prefs.source] || [];
   }
 
+  // A picture that won't load leaves the list, so it isn't offered again this visit
+  forget(img) {
+    let dropped = false;
+    for (const source of Object.keys(this.lists)) {
+      const kept = this.lists[source].filter(i => i !== img);
+      dropped ||= kept.length !== this.lists[source].length;
+      this.lists[source] = kept;
+    }
+    if (dropped && this.gridBuilt) {
+      this.gridBuilt = false;
+      this.renderGrid();
+    }
+  }
+
   // Today's picture from the chosen source; if that source doesn't answer, the other
   // one; if neither does, a painted scene. Each fallback says so.
   async refresh() {
@@ -1586,7 +1600,9 @@ class Wallpaper {
             await this.show(img, candidate);
             shown = true;
             break;
-          } catch {}
+          } catch {
+            this.forget(img);
+          }
         }
         if (!shown) throw new Error('no picture loaded');
         if (candidate !== source) {
@@ -1860,6 +1876,7 @@ class Wallpaper {
         pic.src = img.src.thumb;
         pic.alt = '';
         pic.loading = 'lazy';
+        pic.addEventListener('error', () => this.forget(img));
         const label = document.createElement('span');
         label.textContent = Wallpaper.dayLabel(img.date) || img.title || 'picture';
         btn.append(pic, label);
@@ -1867,7 +1884,10 @@ class Wallpaper {
           this.prefs.pick = { id: img.id, day: new Date().toDateString() };
           this.savePrefs();
           this.setStatus(null);
-          this.show(img, this.shownSource || this.prefs.source).catch(() => this.setStatus('That picture didn\'t load. Try another one.'));
+          this.show(img, this.shownSource || this.prefs.source).catch(() => {
+            this.forget(img);
+            this.setStatus('That picture didn\'t load. Try another one.');
+          });
         });
         return btn;
       }));
