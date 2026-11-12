@@ -2154,7 +2154,10 @@ const BANGS = { g: 'google', ddg: 'duckduckgo', b: 'bing', pm: 'pubmed', w: 'wik
 // The login button: the owner's private dashboard, reachable only over his Tailscale network
 const DASH_URL = 'https://start.lokeshtewari.uk/';
 const MAX_SHORTCUTS = 12;
-// Shown until a visitor adds or removes a shortcut of their own. Public sites only.
+// The site's own shortcuts. Public sites only. To send a change to every browser, edit the
+// list and raise DEFAULT_SHORTCUTS_VERSION: each browser then adds the ones it is missing,
+// once, ahead of the visitor's own. A visitor can still remove any of them.
+const DEFAULT_SHORTCUTS_VERSION = 2;
 const DEFAULT_SHORTCUTS = [
   { name: 'YouTube', url: 'https://www.youtube.com/' },
   { name: 'Gmail', url: 'https://mail.google.com/' },
@@ -2177,10 +2180,13 @@ class Home {
     this.prefs.links = (Array.isArray(this.prefs.links) ? this.prefs.links : [])
       .filter(l => l && typeof l.name === 'string' && Home.normalizeUrl(l.url))
       .slice(0, MAX_SHORTCUTS);
-    // Seed the defaults once; after that an empty list stays empty
-    if (!this.prefs.seeded) {
-      if (!this.prefs.links.length) this.prefs.links = DEFAULT_SHORTCUTS.map(l => ({ ...l }));
-      this.prefs.seeded = true;
+    // Add the site's shortcuts this browser hasn't been offered yet (seeded was `true` in version 1)
+    if ((Number(this.prefs.seeded) || 0) < DEFAULT_SHORTCUTS_VERSION) {
+      const have = new Set(this.prefs.links.map(l => Home.normalizeUrl(l.url)));
+      const missing = DEFAULT_SHORTCUTS.filter(l => !have.has(Home.normalizeUrl(l.url))).map(l => ({ ...l }));
+      this.prefs.links = [...missing, ...this.prefs.links].slice(0, MAX_SHORTCUTS);
+      this.prefs.seeded = DEFAULT_SHORTCUTS_VERSION;
+      Store.set(HOME_KEY, this.prefs);
     }
 
     this.form = document.getElementById('searchForm');
