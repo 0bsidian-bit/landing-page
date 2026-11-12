@@ -84,11 +84,20 @@ const Store = {
   }
 };
 
+// Saved settings, with anything missing or broken replaced by its default
 function loadSettings() {
-  return { ...DEFAULT_SETTINGS, ...Store.get(SETTINGS_KEY, {}) };
+  const saved = Store.get(SETTINGS_KEY, {});
+  const settings = { ...DEFAULT_SETTINGS };
+  if (!saved || typeof saved !== 'object') return settings;
+  for (const [key, fallback] of Object.entries(DEFAULT_SETTINGS)) {
+    const value = saved[key];
+    if (typeof fallback === 'boolean') { if (typeof value === 'boolean') settings[key] = value; }
+    else if (Number.isFinite(value) && value > 0) settings[key] = value;
+  }
+  return settings;
 }
 
-function siteConfirm(message) {
+function siteConfirm(message, { yes = 'yes' } = {}) {
   return new Promise(resolve => {
     const overlay = document.getElementById('confirmOverlay');
     const msg = document.getElementById('confirmMsg');
@@ -96,7 +105,9 @@ function siteConfirm(message) {
     const cancelBtn = document.getElementById('confirmCancel');
     if (!overlay || !msg) { resolve(confirm(message)); return; }
 
+    const returnFocus = document.activeElement;
     msg.textContent = message;
+    yesBtn.textContent = yes;
     overlay.inert = false;
     overlay.classList.add('open');
     overlay.setAttribute('aria-hidden', 'false');
@@ -109,6 +120,7 @@ function siteConfirm(message) {
       yesBtn.removeEventListener('click', onYes);
       cancelBtn.removeEventListener('click', onCancel);
       document.removeEventListener('keydown', onKey, true);
+      returnFocus?.focus?.();
       resolve(result);
     };
 
@@ -116,7 +128,8 @@ function siteConfirm(message) {
     const onCancel = () => cleanup(false);
     const onKey = (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); cleanup(false); }
-      if (e.key === 'Enter') { e.preventDefault(); cleanup(true); }
+      // Enter confirms, unless the cancel button has the focus
+      if (e.key === 'Enter') { e.preventDefault(); cleanup(document.activeElement !== cancelBtn); }
     };
 
     yesBtn.addEventListener('click', onYes);
@@ -455,6 +468,7 @@ class Timer {
     this.endsAt = null;
     this.intervalId = null;
     this.timeLeft = this.length(this.mode);
+    this.span = this.timeLeft; // length of the phase on the clock; a changed setting applies from the next one
     this.baseTitle = document.title;
     this.lastDevelop = null;
     this.developTimer = null;
@@ -488,6 +502,10 @@ class Timer {
     return this.settings[MODES[mode].setting] * 60;
   }
 
+  get started() {
+    return this.running || this.timeLeft < this.span;
+  }
+
   isFocusRunning() {
     return this.running && this.mode === 'pomodoro';
   }
@@ -496,6 +514,7 @@ class Timer {
     Store.set(TIMER_KEY, {
       mode: this.mode,
       timeLeft: this.timeLeft,
+      span: this.span,
       endsAt: this.running ? this.endsAt : null,
       running: this.running,
       cycles: this.cycles
@@ -503,8 +522,10 @@ class Timer {
   }
 
   restore(saved) {
+    const span = Number.isFinite(saved.span) && saved.span > 0 ? saved.span : this.length(this.mode);
     if (saved.running && typeof saved.endsAt === 'number') {
       const left = Math.ceil((saved.endsAt - Date.now()) / 1000);
+      this.span = Math.max(span, left);
       if (left > 0) {
         this.timeLeft = left;
         this.endsAt = saved.endsAt;
@@ -515,8 +536,10 @@ class Timer {
         this.timeLeft = 0;
         this.complete({ restored: true, at: saved.endsAt });
       }
-    } else if (typeof saved.timeLeft === 'number' && saved.timeLeft > 0 && saved.timeLeft <= this.length(this.mode)) {
+    } else if (Number.isFinite(saved.timeLeft) && saved.timeLeft > 0 && saved.timeLeft < span) {
+      // Paused part-way through
       this.timeLeft = saved.timeLeft;
+      this.span = span;
     }
   }
 
@@ -587,7 +610,7 @@ class Timer {
   set(key, value) {
     this.settings[key] = value;
     Store.set(SETTINGS_KEY, this.settings);
-    if (MODES[this.mode].setting === key && !this.running) this.timeLeft = this.length(this.mode);
+    if (MODES[this.mode].setting === key && !this.started) this.timeLeft = this.span = this.length(this.mode);
     this.syncSettingsUI();
     this.render();
     if (key === 'goal') History.render();
@@ -601,8 +624,8 @@ class Timer {
   start({ auto = false } = {}) {
     if (this.running) return;
     if (!auto) AudioHub.get();
-    if (this.timeLeft <= 0) this.timeLeft = this.length(this.mode);
-    if (this.timeLeft === this.length(this.mode)) Quotes.next();
+    if (this.timeLeft <= 0) this.timeLeft = this.span = this.length(this.mode);
+    if (this.timeLeft === this.span) Quotes.next();
     this.running = true;
     this.endsAt = Date.now() + this.timeLeft * 1000;
     clearInterval(this.intervalId);
@@ -622,8 +645,7 @@ class Timer {
   }
 
   async confirmReset() {
-    const started = this.running || this.timeLeft < this.length(this.mode);
-    if (!started) return;
+    if (!this.started) return;
     if (this.mode === 'pomodoro' && !(await siteConfirm('Reset this focus session? It won\'t be logged.'))) return;
     this.reset();
   }
@@ -632,7 +654,7 @@ class Timer {
     this.running = false;
     this.endsAt = null;
     clearInterval(this.intervalId);
-    this.timeLeft = this.length(this.mode);
+    this.timeLeft = this.span = this.length(this.mode);
     this.save();
     this.render();
   }
@@ -644,7 +666,7 @@ class Timer {
     this.running = false;
     this.endsAt = null;
     this.mode = mode;
-    this.timeLeft = this.length(mode);
+    this.timeLeft = this.span = this.length(mode);
     this.save();
     this.render();
     if (autoStart) this.start({ auto: true });
@@ -660,7 +682,8 @@ class Timer {
     this.timeLeft = Math.max(0, Math.ceil((this.endsAt - Date.now()) / 1000));
     if (this.mode === 'pomodoro' && this.settings.tick && !document.hidden) Chime.tick();
     if (this.timeLeft <= 0) {
-      this.complete();
+      // A sleeping laptop wakes up late: log the session when it really ended
+      this.complete({ at: Math.min(Date.now(), this.endsAt) });
       return;
     }
     this.renderTime();
@@ -673,15 +696,16 @@ class Timer {
     this.running = false;
     this.endsAt = null;
     if (!restored && this.settings.bell) Chime.bell();
+    const minutes = Math.max(1, Math.round(this.span / 60));
 
     if (this.mode === 'pomodoro') {
       this.cycles++;
       const task = this.app.tasks?.creditActive();
-      History.add({ type: 'focus', name: task || 'focus', minutes: this.settings.focus, at });
+      History.add({ type: 'focus', name: task || 'focus', minutes, at });
       const long = this.cycles >= this.settings.longEvery;
       const next = long ? `${this.settings.longBreak}-minute long break` : `${this.settings.shortBreak}-minute break`;
       if (!restored) {
-        this.app.toast('Observed.', `${this.settings.focus} minutes${task ? ` on ${task}` : ' of focus'}. Time for a ${next}.`);
+        this.app.toast('Observed.', `${minutes} minute${minutes === 1 ? '' : 's'}${task ? ` on ${task}` : ' of focus'}. Time for a ${next}.`);
         this.app.notify('Focus session done', `Time for a ${next}.`);
       }
       this.setMode(long ? 'longBreak' : 'shortBreak', { autoStart: !restored && this.settings.autoBreak });
@@ -691,7 +715,7 @@ class Timer {
         type: 'break',
         kind: long ? 'long' : 'short',
         name: MODES[this.mode].label,
-        minutes: this.settings[MODES[this.mode].setting],
+        minutes,
         at
       });
       if (!restored) {
@@ -710,7 +734,7 @@ class Timer {
 
   startLabel() {
     if (this.running) return 'pause';
-    return this.timeLeft < this.length(this.mode) ? 'resume' : 'start';
+    return this.timeLeft < this.span ? 'resume' : 'start';
   }
 
   phaseLabel() {
@@ -729,7 +753,7 @@ class Timer {
   updateDevelop() {
     const root = this.el.root;
     const enabled = this.app.wallpaper?.prefs.develop !== false;
-    const inSession = this.mode === 'pomodoro' && (this.running || this.timeLeft < this.length(this.mode));
+    const inSession = this.mode === 'pomodoro' && this.started;
     if (!enabled || !inSession) {
       if (this.lastDevelop !== 1) {
         this.lastDevelop = 1;
@@ -742,7 +766,7 @@ class Timer {
     }
     clearTimeout(this.developTimer);
     root.setAttribute('data-developing', '');
-    const step = Math.floor((1 - this.timeLeft / this.length(this.mode)) * 100) / 100;
+    const step = Math.max(0, Math.floor((1 - this.timeLeft / this.span) * 100) / 100);
     if (step !== this.lastDevelop) {
       this.lastDevelop = step;
       root.style.setProperty('--develop', step.toFixed(2));
@@ -752,7 +776,7 @@ class Timer {
   renderTime() {
     const text = this.clockText();
     DOMUtils.setDigits(this.el.digits, text);
-    const elapsed = Math.max(0, 1 - this.timeLeft / this.length(this.mode));
+    const elapsed = Math.max(0, 1 - this.timeLeft / this.span);
     if (this.el.progress) this.el.progress.style.width = `${(elapsed * 100).toFixed(2)}%`;
     document.title = this.running ? `(${text}) 0bsidian` : this.baseTitle;
     if (this.el.viewTimer) {
@@ -1232,13 +1256,20 @@ class Scenery {
   paintMain() {
     const first = this.canvases[0];
     if (!first) return;
+    // A photo covers the scene, so it is only painted once it is needed
+    if (document.documentElement.dataset.wall === 'on') return;
     const w = first.clientWidth || window.innerWidth;
     const h = first.clientHeight || window.innerHeight;
     const size = `${this.current}:${w}x${h}`;
     if (size === this.lastSize) return;
     this.lastSize = size;
+    Scenery.paint(first, this.scene, w, h);
     this.canvases.forEach(c => {
-      Scenery.paint(c, this.scene, w, h);
+      if (c !== first) {
+        c.width = first.width;
+        c.height = first.height;
+        c.getContext('2d').drawImage(first, 0, 0);
+      }
       c.classList.add('is-ready');
     });
   }
@@ -1435,7 +1466,7 @@ class Scenery {
 
 // ── Picture of the day (NASA or Bing, passed through the worker) ─────────────
 
-const PICTURE_FEED_VERSION = 3; // bump when the worker's list format changes, to skip stale caches
+const PICTURE_FEED_VERSION = 4; // bump when the worker's list format changes, to skip stale caches
 const PICTURE_SOURCES = {
   apod: { who: 'NASA', picture: 'NASA\u2019s space picture' },
   bing: { who: 'Bing', picture: 'Bing\u2019s photo' }
@@ -1558,7 +1589,17 @@ class Wallpaper {
     const images = (data.images || []).filter(Wallpaper.valid);
     if (!images.length) throw new Error('no pictures');
     this.lists[source] = images;
+    this.loadedDay = new Date().toDateString();
     return images;
+  }
+
+  // A tab left open overnight: fetch the new day's picture, but not in the middle of a session
+  rollover(busy) {
+    if (!this.photoOn || busy || !this.loadedDay || this.loadedDay === new Date().toDateString()) return;
+    this.lists = {};
+    this.loadedDay = null;
+    this.gridBuilt = false;
+    this.refresh();
   }
 
   get images() {
@@ -1819,6 +1860,7 @@ class Wallpaper {
     ['--accent', '--accent-ink', '--bg', '--wall'].forEach(p => this.root.style.removeProperty(p));
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', this.scenery.scene.theme);
     Store.remove(LOOK_KEY);
+    this.scenery.paintMain();
     this.scenery.markActive(true);
     this.updateCaption();
     this.renderGrid();
@@ -2003,7 +2045,7 @@ class TabIcon {
       }
       return;
     }
-    const left = timer.timeLeft / timer.length(timer.mode);
+    const left = timer.timeLeft / timer.span;
     const rest = timer.mode !== 'pomodoro';
     const key = `${Math.round(left * 60)}:${rest}`;
     if (key === this.key) return;
@@ -2107,18 +2149,39 @@ const ENGINES = {
   wikipedia:  { label: 'Wikipedia',  url: 'https://en.wikipedia.org/w/index.php?search=' },
   youtube:    { label: 'YouTube',    url: 'https://www.youtube.com/results?search_query=' }
 };
+// "!yt lofi" searches YouTube once, whatever engine is selected
+const BANGS = { g: 'google', ddg: 'duckduckgo', b: 'bing', pm: 'pubmed', w: 'wikipedia', yt: 'youtube' };
+// The login button: the owner's private dashboard, reachable only over his Tailscale network
+const DASH_URL = 'https://start.lokeshtewari.uk/';
 const MAX_SHORTCUTS = 12;
+// Shown until a visitor adds or removes a shortcut of their own. Public sites only.
+const DEFAULT_SHORTCUTS = [
+  { name: 'YouTube', url: 'https://www.youtube.com/' },
+  { name: 'Gmail', url: 'https://mail.google.com/' },
+  { name: 'UWorld', url: 'https://www.uworld.com/' },
+  { name: 'Amazon', url: 'https://www.amazon.in/' },
+  { name: 'GitHub', url: 'https://github.com/' }
+];
 const COMMON_TLDS = new Set(('com net org edu gov mil int info biz dev app xyz site online store tech blog '
   + 'page cloud art design news shop live wiki social email link one top fun club space world').split(' '));
 
 class Home {
   constructor() {
     const hourCycle = new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions().hourCycle || 'h23';
-    this.prefs = { engine: 'google', links: [], clock24: !hourCycle.startsWith('h1'), newTab: false, ...Store.get(HOME_KEY, {}) };
+    this.prefs = {
+      engine: 'google', links: [], clock24: !hourCycle.startsWith('h1'), newTab: false,
+      showFocus: true, countName: '', countDate: '', ...Store.get(HOME_KEY, {})
+    };
+    this.onChange = null; // the app re-reads showFocus
     if (!ENGINES[this.prefs.engine]) this.prefs.engine = 'google';
     this.prefs.links = (Array.isArray(this.prefs.links) ? this.prefs.links : [])
       .filter(l => l && typeof l.name === 'string' && Home.normalizeUrl(l.url))
       .slice(0, MAX_SHORTCUTS);
+    // Seed the defaults once; after that an empty list stays empty
+    if (!this.prefs.seeded) {
+      if (!this.prefs.links.length) this.prefs.links = DEFAULT_SHORTCUTS.map(l => ({ ...l }));
+      this.prefs.seeded = true;
+    }
 
     this.form = document.getElementById('searchForm');
     this.input = document.getElementById('searchInput');
@@ -2128,6 +2191,7 @@ class Home {
     this.linkForm = document.getElementById('shortcutForm');
     this.linkName = document.getElementById('shortcutName');
     this.linkUrl = document.getElementById('shortcutUrl');
+    this.linkUrlHint = this.linkUrl?.placeholder;
     this.clock = {
       digits: document.getElementById('clockDigits'),
       day: document.getElementById('clockDay'),
@@ -2181,9 +2245,36 @@ class Home {
       newTab.addEventListener('change', () => { this.prefs.newTab = newTab.checked; this.save(); });
     }
 
+    const showFocus = document.getElementById('setShowFocus');
+    if (showFocus) {
+      showFocus.checked = this.prefs.showFocus !== false;
+      showFocus.addEventListener('change', () => { this.prefs.showFocus = showFocus.checked; this.save(); this.onChange?.(); });
+    }
+    const text = (id, key, after) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = typeof this.prefs[key] === 'string' ? this.prefs[key] : '';
+      el.addEventListener('input', () => { this.prefs[key] = el.value.trim(); this.save(); after(); });
+    };
+    text('setCountName', 'countName', () => this.tickClock());
+    text('setCountDate', 'countDate', () => this.tickClock());
+
     this.renderEngine();
     this.renderLinks();
     this.startClock();
+  }
+
+  // "Exam in 43 days", from the name and date in settings; nothing once the day has passed
+  countdownText() {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(this.prefs.countDate || '');
+    if (!m) return '';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((new Date(+m[1], +m[2] - 1, +m[3]) - today) / 86400000);
+    if (!(days >= 0)) return '';
+    const name = this.prefs.countName || 'the day';
+    if (days === 0) return `${name} is today`;
+    return days === 1 ? `${name} tomorrow` : `${name} in ${days} days`;
   }
 
   save() {
@@ -2235,7 +2326,11 @@ class Home {
       this.focus();
       return;
     }
-    const url = Home.addressFrom(query) || `${ENGINES[this.prefs.engine].url}${encodeURIComponent(query)}`;
+    const bang = /^!([a-z]+)\s+(.+)$/i.exec(query);
+    const engine = bang && BANGS[bang[1].toLowerCase()];
+    const url = engine
+      ? `${ENGINES[engine].url}${encodeURIComponent(bang[2])}`
+      : Home.addressFrom(query) || `${ENGINES[this.prefs.engine].url}${encodeURIComponent(query)}`;
     if (newTab || this.prefs.newTab) {
       window.open(url, '_blank', 'noopener');
       this.input.value = '';
@@ -2253,7 +2348,7 @@ class Home {
       a.href = link.url;
       a.rel = 'noopener';
       a.textContent = link.name;
-      a.title = link.url;
+      a.title = i < 9 ? `${link.url} (Alt+${i + 1})` : link.url;
       const del = document.createElement('button');
       del.className = 'delete-btn';
       del.textContent = '×';
@@ -2284,6 +2379,7 @@ class Home {
     this.list.hidden = true;
     this.linkName.value = '';
     this.linkUrl.value = '';
+    this.linkUrl.placeholder = this.linkUrlHint;
     this.linkName.focus();
   }
 
@@ -2334,6 +2430,11 @@ class Home {
       this.clock.meridiem.textContent = meridiem;
     }
     if (this.clock.sep) this.clock.sep.hidden = !meridiem;
+    const countdown = this.countdownText();
+    const countEl = document.getElementById('countdownText');
+    const countSep = document.getElementById('countdownSep');
+    if (countEl) { countEl.hidden = !countdown; countEl.textContent = countdown; }
+    if (countSep) countSep.hidden = !countdown;
   }
 }
 
@@ -2375,6 +2476,11 @@ class App {
     };
     this.about = new Modal('aboutOverlay', { openers: ['aboutLink'] });
 
+    this.dashBtn = document.getElementById('dashBtn');
+    this.dashBtn?.addEventListener('click', () => this.openDash());
+    this.home.onChange = () => this.applyHomePrefs();
+    this.applyHomePrefs();
+
     // The site opens on search; #focus opens the timer
     document.querySelectorAll('.view-tab').forEach(tab => {
       tab.addEventListener('click', () => this.setView(tab.dataset.view, { focusSearch: true }));
@@ -2403,7 +2509,7 @@ class App {
     this.registerServiceWorker();
 
     // Browsers only allow sound after an interaction, so wake audio on the first one
-    const unlock = () => AudioHub.get();
+    const unlock = () => { if (AudioHub.get()) this.ambience.sync(); };
     document.addEventListener('pointerdown', unlock, { once: true });
     document.addEventListener('keydown', unlock, { once: true });
 
@@ -2412,8 +2518,32 @@ class App {
       if (!document.hidden) {
         History.render();
         this.tasks.renderSummary();
+        this.wallpaper.rollover(this.timer.started);
       }
     });
+  }
+
+  get homeOnly() {
+    return this.home.prefs.showFocus === false;
+  }
+
+  // "show the focus timer" off leaves only the homepage
+  applyHomePrefs() {
+    const only = this.homeOnly;
+    document.getElementById('app')?.classList.toggle('home-only', only);
+    document.documentElement.toggleAttribute('data-home-only', only); // the sheets sit outside .app
+    if (only) {
+      this.timer.pause();
+      Sheet.all.forEach(s => { if (s !== this.sheets.settings && s !== this.sheets.photo) s.close(); });
+      if (this.view !== 'search') this.setView('search');
+    }
+  }
+
+  // The dashboard lives on a private network, so say what it needs before leaving
+  async openDash() {
+    if (await siteConfirm('This opens Lokesh\u2019s private dashboard, which only loads over Tailscale. Turn on Tailscale first.', { yes: 'open' })) {
+      window.location.href = DASH_URL;
+    }
   }
 
   onTimerChange() {
@@ -2422,7 +2552,7 @@ class App {
   }
 
   setView(view, { focusSearch = false } = {}) {
-    this.view = view === 'focus' ? 'focus' : 'search';
+    this.view = view === 'focus' && !this.homeOnly ? 'focus' : 'search';
     const app = document.getElementById('app');
     app?.classList.toggle('view-search', this.view === 'search');
     app?.classList.toggle('view-focus', this.view === 'focus');
@@ -2504,6 +2634,15 @@ class App {
 
   setupShortcuts() {
     document.addEventListener('keydown', (e) => {
+      // Alt + 1–9 opens that shortcut, from anywhere on the page
+      if (e.altKey && !e.metaKey && !e.ctrlKey && /^Digit[1-9]$/.test(e.code) && !document.querySelector('.overlay.open')) {
+        const link = this.home.prefs.links[Number(e.code.slice(5)) - 1];
+        if (link) {
+          e.preventDefault();
+          window.location.href = link.url;
+        }
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
       if (document.querySelector('.overlay.open')) return;
