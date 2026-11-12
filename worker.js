@@ -19,6 +19,7 @@ const CONFIG = {
   APOD_IMAGE_HOST: /(^|\.)nasa\.gov$/i, // science.nasa.gov, assets.science.nasa.gov, apod.nasa.gov, …
   APOD_DAYS: 16,    // newest entries whose pictures are looked up
   APOD_LISTED: 12,
+  APOD_THUMB: 480, APOD_SD: 2048, APOD_HD: 3840, // longest side, in pixels, of each size offered
   APOD_PROBES: 36,  // upstream requests allowed while looking them up (Workers cap subrequests at 50)
   IMAGE_TYPE: /^image\/(jpeg|png|webp|gif|avif)\b/i, // formats every browser can show
   USER_AGENT: "0bsidian/1.0 (+https://lokeshtewari.uk)",
@@ -208,11 +209,34 @@ class Apod {
     return fromPage && !candidates.includes(fromPage) && await Apod.isImage(fromPage, budget) ? fromPage : null;
   }
 
+  // NASA's image host resizes on request ("…/dynamicimage/…?w=&h="). Ask for the size the
+  // page needs, never larger than the original (the host would scale it up).
+  static sized(image, max) {
+    let url;
+    try { url = new URL(image); } catch { return image; }
+    if (url.hostname !== "assets.science.nasa.gov" || !url.pathname.startsWith("/dynamicimage/")) return image;
+    const w = Number(url.searchParams.get("w")) || 0;
+    const h = Number(url.searchParams.get("h")) || 0;
+    if (w > 0 && h > 0) {
+      const scale = max / Math.max(w, h);
+      if (scale >= 1) return image;
+      url.searchParams.set("w", String(Math.round(w * scale)));
+      url.searchParams.set("h", String(Math.round(h * scale)));
+    } else if (max <= CONFIG.APOD_THUMB) {
+      // Original size unknown: only the thumbnail is worth the risk of scaling up
+      url.searchParams.set("w", String(max));
+      url.searchParams.set("h", String(max));
+    } else {
+      return image;
+    }
+    return url.toString();
+  }
+
   static async parse(d, budget) {
     const compact = Apod.day(d);
     const image = await Apod.findImage(d, compact, budget);
     if (!image) return null;
-    const src = imageUrl({ source: "apod", u: image });
+    const src = (max) => imageUrl({ source: "apod", u: Apod.sized(image, max) });
     const link = [d.permalink, d.url, d.basic_html_url].find(l => typeof l === "string" && /^https:\/\/([a-z0-9-]+\.)*nasa\.gov\//i.test(l))
       || (compact ? `https://apod.nasa.gov/apod/ap${compact.slice(2)}.html` : "https://apod.nasa.gov/apod/");
     const credit = Apod.text(d.credit, 160).replace(/^(image\s+)?credits?(\s*(and|&)\s*copyright)?\s*:\s*/i, "");
@@ -228,7 +252,7 @@ class Apod {
       caption: video ? `${caption} (A video on NASA's site; this is a still from it.)` : caption,
       credit: `${creditLine}.`,
       link,
-      src: { thumb: src, sd: src, hd: src, portrait: src },
+      src: { thumb: src(CONFIG.APOD_THUMB), sd: src(CONFIG.APOD_SD), hd: src(CONFIG.APOD_HD), portrait: src(CONFIG.APOD_SD) },
     };
   }
 

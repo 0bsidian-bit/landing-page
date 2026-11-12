@@ -26,9 +26,9 @@
 <meta name="apple-mobile-web-app-title" content="0bsidian">
 <link rel="preload" href="/fonts/bodoni-moda.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=19">
+<link rel="stylesheet" href="/styles.css?v=20">
 <script src="/boot.js?v=1"></script>
-<script src="/app.js?v=13" defer></script>
+<script src="/app.js?v=14" defer></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -82,11 +82,12 @@
         <button class="view-tab" role="tab" id="viewFocusTab" data-view="focus" aria-selected="false">focus<span class="view-timer" id="viewTimer" hidden></span></button>
       </div>
       <nav class="index" aria-label="Tools">
+        <button class="index-link" id="dashBtn" hidden title="Open your dashboard">login</button>
         <button class="index-link" id="tasksBtn" aria-expanded="false" title="Tasks (T)">tasks</button>
         <button class="index-link" id="soundsBtn" aria-expanded="false" title="Focus sounds">sounds</button>
         <button class="index-link" id="statsBtn" aria-expanded="false" title="Today and history">today <span class="index-value" id="todayText">0m / 4h</span></button>
         <button class="index-link" id="backgroundBtn" aria-expanded="false" title="Picture of the day">picture</button>
-        <button class="index-link" id="settingsBtn" aria-expanded="false" title="Timer settings">settings</button>
+        <button class="index-link" id="settingsBtn" aria-expanded="false" title="Settings">settings</button>
         <span class="index-rule" aria-hidden="true"></span>
         <button class="index-icon" id="popoutBtn" hidden title="Pop out a mini timer that stays on top (P)" aria-label="Pop out mini timer">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="15" rx="1.5"/><rect x="12" y="11" width="7" height="5.5" rx="0.5"/></svg>
@@ -118,7 +119,7 @@
       </section>
 
       <section class="clock" id="clockView" aria-label="Time and date">
-        <p class="phase-line"><span class="phase-name" id="clockDay">today</span><span class="phase-sep" aria-hidden="true">/</span><span id="clockDate"></span><span class="phase-sep" id="clockSep" aria-hidden="true" hidden>/</span><span id="clockMeridiem" hidden></span></p>
+        <p class="phase-line"><span class="phase-name" id="clockDay">today</span><span class="phase-sep" aria-hidden="true">/</span><span id="clockDate"></span><span class="phase-sep" id="clockSep" aria-hidden="true" hidden>/</span><span id="clockMeridiem" hidden></span><span class="phase-sep" id="countdownSep" aria-hidden="true" hidden>/</span><span id="countdownText" hidden></span></p>
         <div class="timer-digits" id="clockDigits">00:00</div>
       </section>
 
@@ -261,13 +262,30 @@
     </div>
   </aside>
 
-  <aside class="sheet" id="settingsSheet" aria-label="Timer settings">
+  <aside class="sheet" id="settingsSheet" aria-label="Settings">
     <header class="sheet-head">
       <h2 class="sheet-title">Settings</h2>
       <button class="sheet-close" data-close aria-label="Close settings">close</button>
     </header>
     <div class="sheet-scroll">
       <section class="group">
+        <h3 class="label">home</h3>
+        <label class="toggle-row" for="setClock24"><span>24-hour clock</span><input type="checkbox" id="setClock24" class="switch"></label>
+        <label class="toggle-row" for="setNewTab"><span>open searches in a new tab</span><input type="checkbox" id="setNewTab" class="switch"></label>
+        <label class="toggle-row" for="setShowFocus"><span>show the focus timer</span><input type="checkbox" id="setShowFocus" class="switch"></label>
+        <div class="text-row">
+          <label for="setDash">login button opens</label>
+          <input type="text" id="setDash" maxlength="300" placeholder="your dashboard's address" inputmode="url" autocomplete="off" spellcheck="false">
+        </div>
+        <p class="hint">Adds a login button at the top that opens your own dashboard. The address is saved in this browser only.</p>
+        <div class="text-row">
+          <label for="setCountName">count down to</label>
+          <input type="text" id="setCountName" maxlength="24" placeholder="e.g. exam day" autocomplete="off">
+          <input type="date" id="setCountDate" aria-label="Countdown date">
+        </div>
+      </section>
+
+      <section class="group timer-only">
         <h3 class="label">lengths</h3>
         <div class="field-row">
           <label for="setFocus">focus</label>
@@ -291,7 +309,7 @@
         </div>
       </section>
 
-      <section class="group">
+      <section class="group timer-only">
         <h3 class="label">flow</h3>
         <label class="toggle-row" for="setAutoBreak"><span>start breaks automatically</span><input type="checkbox" id="setAutoBreak" data-setting="autoBreak" class="switch"></label>
         <label class="toggle-row" for="setAutoFocus"><span>start the next focus session automatically</span><input type="checkbox" id="setAutoFocus" data-setting="autoFocus" class="switch"></label>
@@ -302,13 +320,7 @@
         </div>
       </section>
 
-      <section class="group">
-        <h3 class="label">home</h3>
-        <label class="toggle-row" for="setClock24"><span>24-hour clock</span><input type="checkbox" id="setClock24" class="switch"></label>
-        <label class="toggle-row" for="setNewTab"><span>open searches in a new tab</span><input type="checkbox" id="setNewTab" class="switch"></label>
-      </section>
-
-      <section class="group">
+      <section class="group timer-only">
         <h3 class="label">alerts</h3>
         <label class="toggle-row" for="setBell"><span>bell when a timer ends</span><input type="checkbox" id="setBell" data-setting="bell" class="switch"></label>
         <label class="toggle-row" for="setTick"><span>ticking during focus</span><input type="checkbox" id="setTick" data-setting="tick" class="switch"></label>
@@ -320,14 +332,15 @@
         <h3 class="label">keyboard</h3>
         <dl class="shortcuts">
           <div><dt><kbd>/</kbd></dt><dd>search</dd></div>
-          <div><dt><kbd>Space</kbd></dt><dd>start or pause</dd></div>
-          <div><dt><kbd>R</kbd></dt><dd>reset</dd></div>
-          <div><dt><kbd>S</kbd></dt><dd>skip to the next phase</dd></div>
-          <div><dt><kbd>T</kbd></dt><dd>tasks</dd></div>
-          <div><dt><kbd>F</kbd></dt><dd>zen mode</dd></div>
-          <div><dt><kbd>P</kbd></dt><dd>pop-out mini timer</dd></div>
+          <div><dt><kbd>Alt 1–9</kbd></dt><dd>open that shortcut</dd></div>
+          <div class="timer-only"><dt><kbd>Space</kbd></dt><dd>start or pause</dd></div>
+          <div class="timer-only"><dt><kbd>R</kbd></dt><dd>reset</dd></div>
+          <div class="timer-only"><dt><kbd>S</kbd></dt><dd>skip to the next phase</dd></div>
+          <div class="timer-only"><dt><kbd>T</kbd></dt><dd>tasks</dd></div>
+          <div class="timer-only"><dt><kbd>F</kbd></dt><dd>zen mode</dd></div>
+          <div class="timer-only"><dt><kbd>P</kbd></dt><dd>pop-out mini timer</dd></div>
         </dl>
-        <p class="hint">Letter shortcuts work in the focus view. In the search view, just start typing. Hold Ctrl or ⌘ when you press Enter to search in a new tab.</p>
+        <p class="hint">In the search view, just start typing. Hold Ctrl or ⌘ when you press Enter to search in a new tab. Start a search with <kbd>!yt</kbd>, <kbd>!w</kbd>, <kbd>!pm</kbd>, <kbd>!g</kbd>, <kbd>!ddg</kbd> or <kbd>!b</kbd> to use YouTube, Wikipedia, PubMed, Google, DuckDuckGo or Bing for that one search.<span class="timer-only"> Letter shortcuts work in the focus view.</span></p>
       </section>
     </div>
   </aside>
