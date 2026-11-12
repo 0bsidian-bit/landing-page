@@ -2151,6 +2151,8 @@ const ENGINES = {
 };
 // "!yt lofi" searches YouTube once, whatever engine is selected
 const BANGS = { g: 'google', ddg: 'duckduckgo', b: 'bing', pm: 'pubmed', w: 'wikipedia', yt: 'youtube' };
+// The login button: the owner's private dashboard, reachable only over his Tailscale network
+const DASH_URL = 'https://start.lokeshtewari.uk/';
 const MAX_SHORTCUTS = 12;
 // Shown until a visitor adds or removes a shortcut of their own. Public sites only.
 const DEFAULT_SHORTCUTS = [
@@ -2168,9 +2170,9 @@ class Home {
     const hourCycle = new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions().hourCycle || 'h23';
     this.prefs = {
       engine: 'google', links: [], clock24: !hourCycle.startsWith('h1'), newTab: false,
-      showFocus: true, dash: '', countName: '', countDate: '', ...Store.get(HOME_KEY, {})
+      showFocus: true, countName: '', countDate: '', ...Store.get(HOME_KEY, {})
     };
-    this.onChange = null; // the app re-reads showFocus and dash
+    this.onChange = null; // the app re-reads showFocus
     if (!ENGINES[this.prefs.engine]) this.prefs.engine = 'google';
     this.prefs.links = (Array.isArray(this.prefs.links) ? this.prefs.links : [])
       .filter(l => l && typeof l.name === 'string' && Home.normalizeUrl(l.url))
@@ -2254,19 +2256,12 @@ class Home {
       el.value = typeof this.prefs[key] === 'string' ? this.prefs[key] : '';
       el.addEventListener('input', () => { this.prefs[key] = el.value.trim(); this.save(); after(); });
     };
-    text('setDash', 'dash', () => this.onChange?.());
     text('setCountName', 'countName', () => this.tickClock());
     text('setCountDate', 'countDate', () => this.tickClock());
 
     this.renderEngine();
     this.renderLinks();
     this.startClock();
-  }
-
-  // The address behind the login button, if one is set
-  get dashUrl() {
-    const raw = typeof this.prefs.dash === 'string' ? this.prefs.dash.trim() : '';
-    return raw ? Home.normalizeUrl(raw) : null;
   }
 
   // "Exam in 43 days", from the name and date in settings; nothing once the day has passed
@@ -2532,9 +2527,8 @@ class App {
     return this.home.prefs.showFocus === false;
   }
 
-  // The login button shows once it has an address; "show the focus timer" off leaves only the homepage
+  // "show the focus timer" off leaves only the homepage
   applyHomePrefs() {
-    if (this.dashBtn) this.dashBtn.hidden = !this.home.dashUrl;
     const only = this.homeOnly;
     document.getElementById('app')?.classList.toggle('home-only', only);
     document.documentElement.toggleAttribute('data-home-only', only); // the sheets sit outside .app
@@ -2547,10 +2541,8 @@ class App {
 
   // The dashboard lives on a private network, so say what it needs before leaving
   async openDash() {
-    const url = this.home.dashUrl;
-    if (!url) return;
-    if (await siteConfirm('Opens your dashboard. Away from home? Turn on Tailscale first.', { yes: 'open' })) {
-      window.location.href = url;
+    if (await siteConfirm('This opens Lokesh\u2019s private dashboard, which only loads over Tailscale. Turn on Tailscale first.', { yes: 'open' })) {
+      window.location.href = DASH_URL;
     }
   }
 

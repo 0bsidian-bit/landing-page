@@ -12,7 +12,9 @@ Built on Cloudflare Workers. No framework, no build step, no API keys.
 
 **Search (the homepage).** A search bar over the picture, with Google, DuckDuckGo, Bing, PubMed, Wikipedia or YouTube. Type an address like `github.com` and it goes straight there. Start typing anywhere on the page and it goes into the search bar, or press `/`. Ctrl or ⌘ + Enter opens the result in a new tab (or turn on "open searches in a new tab" in settings). Up to 12 shortcuts sit under the search bar. New visitors start with a few defaults (`DEFAULT_SHORTCUTS` in `app.js`), which they can remove. The time and date fill the bottom corner, in a 24-hour or 12-hour clock.
 
-**Homepage extras.** Start a search with `!yt`, `!w`, `!pm`, `!g`, `!ddg` or `!b` to use another engine for that one search. `Alt` + `1`–`9` opens a shortcut. Settings can add a countdown to a date beside the clock, a login button that opens your own dashboard (the address stays in the browser), and can put the focus timer away so only the homepage is left.
+**Homepage extras.** Start a search with `!yt`, `!w`, `!pm`, `!g`, `!ddg` or `!b` to use another engine for that one search. `Alt` + `1`–`9` opens a shortcut. Settings can add a countdown to a date beside the clock, and can put the focus timer away so only the homepage is left.
+
+The `login` button at the top opens the owner's private dashboard (`DASH_URL` in `app.js`), which only loads over his Tailscale network; it says so before leaving.
 
 **Two views.** `search` and `focus` tabs sit next to the logo. A running timer keeps going on the search view and shows its time on the focus tab. `/#focus` opens straight to the timer, which is handy as a bookmark.
 

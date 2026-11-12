@@ -82,7 +82,7 @@
         <button class="view-tab" role="tab" id="viewFocusTab" data-view="focus" aria-selected="false">focus<span class="view-timer" id="viewTimer" hidden></span></button>
       </div>
       <nav class="index" aria-label="Tools">
-        <button class="index-link" id="dashBtn" hidden title="Open your dashboard">login</button>
+        <button class="index-link" id="dashBtn" title="Private dashboard (needs Tailscale)">login</button>
         <button class="index-link" id="tasksBtn" aria-expanded="false" title="Tasks (T)">tasks</button>
         <button class="index-link" id="soundsBtn" aria-expanded="false" title="Focus sounds">sounds</button>
         <button class="index-link" id="statsBtn" aria-expanded="false" title="Today and history">today <span class="index-value" id="todayText">0m / 4h</span></button>
@@ -273,11 +273,6 @@
         <label class="toggle-row" for="setClock24"><span>24-hour clock</span><input type="checkbox" id="setClock24" class="switch"></label>
         <label class="toggle-row" for="setNewTab"><span>open searches in a new tab</span><input type="checkbox" id="setNewTab" class="switch"></label>
         <label class="toggle-row" for="setShowFocus"><span>show the focus timer</span><input type="checkbox" id="setShowFocus" class="switch"></label>
-        <div class="text-row">
-          <label for="setDash">login button opens</label>
-          <input type="text" id="setDash" maxlength="300" placeholder="your dashboard's address" inputmode="url" autocomplete="off" spellcheck="false">
-        </div>
-        <p class="hint">Adds a login button at the top that opens your own dashboard. The address is saved in this browser only.</p>
         <div class="text-row">
           <label for="setCountName">count down to</label>
           <input type="text" id="setCountName" maxlength="24" placeholder="e.g. exam day" autocomplete="off">
